@@ -1,13 +1,68 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <QAudioOutput>
+#include <QAudioFormat>
+#include <QBuffer>
+#include <QByteArray>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 #include <QTextToSpeechEngine>
+
+#include "piper/piper.hpp"
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    int sampleRate = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
+    int channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
+    int sampleSize = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+
+    const std::string modelPath = "/path/to/piper/model";
+
+
+    piper::PiperConfig pConf;
+    pConf.eSpeakDataPath = "";
+    pConf.useESpeak = true;
+
+    piper::Voice pVoice;
+    std::optional<piper::SpeakerId> speakerId;
+    piper::loadVoice(pConf, "en_US-lessac-high.onnx", "en_US-lessac-high.onnx.json", pVoice,speakerId, false);
+
+    piper::SynthesisResult result = {};
+
+
+    piper::initialize(pConf);
+    // std::ofstream audioFile("output.wav", std::ios::binary);
+
+    std::vector<int16_t> audioBuffer;
+
+    piper::textToAudio(pConf,pVoice, "Hello ali", audioBuffer,result, nullptr);
+
+    QByteArray audioData(reinterpret_cast<const char*>(audioBuffer.data()),
+                         static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
+
+    // Use a QBuffer to wrap the data for streaming playback.
+    QBuffer *audioBufferQ = new QBuffer;
+    audioBufferQ->setData(audioData);
+
+    QAudioFormat format;
+    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
+    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
+    format.setSampleFormat(QAudioFormat::Int16);
+    // format.setCodec("audio/pcm");
+    // format.setByteOrder(QAudioFormat::LittleEndian);
+    // format.setSampleType(QAudioFormat::SignedInt);
 
     // Populate engine selection list
     ui->engine->addItem("Default", "default");
