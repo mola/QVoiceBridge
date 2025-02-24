@@ -6,13 +6,16 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <QAudioDevice>
 #include <QAudioOutput>
 #include <QAudioFormat>
+#include <QMediaDevices>
 #include <QBuffer>
 #include <QByteArray>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+#include <QAudioSink>
 #include <QTextToSpeechEngine>
 
 #include "piper/piper.hpp"
@@ -60,9 +63,16 @@ MainWindow::MainWindow(QWidget *parent)
     format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
     format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
     format.setSampleFormat(QAudioFormat::Int16);
-    // format.setCodec("audio/pcm");
-    // format.setByteOrder(QAudioFormat::LittleEndian);
-    // format.setSampleType(QAudioFormat::SignedInt);
+
+    const QAudioDevice inputDevice = QMediaDevices::defaultAudioOutput();
+
+    // QAudioDevice info(QMediaDevices::defaultAudioOutput());
+    // if (!info.isFormatSupported(format)) {
+    //     qWarning() << "Raw audio format not supported by backend, cannot play audio.";
+    // }
+
+    // auto audio = new QAudioSink(format, this);
+    // audio->start(audioBufferQ);
 
     // Populate engine selection list
     ui->engine->addItem("Default", "default");
