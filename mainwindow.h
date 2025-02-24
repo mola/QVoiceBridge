@@ -3,8 +3,12 @@
 
 #include <QAudioFormat>
 #include <QAudioOutput>
+#include <QAudioSink>
 #include <QMainWindow>
-#include <QTextToSpeech>
+#include <QMediaDevices>
+
+#include "piper/piper.hpp"
+
 
 
 QT_BEGIN_NAMESPACE
@@ -24,22 +28,20 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-public slots:
-    void setRate(int rate);
-    void setPitch(int pitch);
-    void setVolume(int volume);
-
 private slots:
 
-    void engineSelected(int index);
-    void languageSelected(int language);
-    void voiceSelected(int index);
-    void stateChanged(QTextToSpeech::State state);
-    void localeChanged(const QLocale &locale);
-    void onEngineReady();
+   void on_speakButton_clicked();
+
+    void on_language_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
-    QTextToSpeech *m_speech = nullptr;
-    QList<QVoice> m_voices;
+
+    piper::PiperConfig m_pConf;
+    piper::Voice *m_pVoice = nullptr;
+
+    QMediaDevices *m_devices = nullptr;
+    QAudioSink *m_audioOutput = nullptr;
+
 };
 #endif // MAINWINDOW_H
