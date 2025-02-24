@@ -25,7 +25,7 @@ LlamaInterface::~LlamaInterface()
     }
 }
 
-bool  LlamaInterface::loadModel(const QString &modelFile)
+bool LlamaInterface::loadModel(const QString &modelFile)
 {
     // Create a set of parameters for the llama context.
     llama_model_params  params = llama_model_default_params();
@@ -46,7 +46,7 @@ bool  LlamaInterface::loadModel(const QString &modelFile)
     // Create a context for the model.
     llama_context_params  ctx_params = llama_context_default_params();
 
-    m_context = llama_new_context_with_model(m_model, ctx_params);
+    m_context = llama_init_from_model(m_model, ctx_params);
 
     if (!m_context)
     {
@@ -67,7 +67,7 @@ bool  LlamaInterface::loadModel(const QString &modelFile)
     return true;
 }
 
-void  LlamaInterface::askQuestion(const QString &question)
+void LlamaInterface::askQuestion(const QString &question)
 {
     std::string  prompt = question.toStdString();
     std::string  response;
@@ -80,7 +80,9 @@ void  LlamaInterface::askQuestion(const QString &question)
 
     if (llama_tokenize(m_vocab, prompt.c_str(), prompt.size(), prompt_tokens.data(), prompt_tokens.size(), is_first, true) < 0)
     {
-        GGML_ABORT("failed to tokenize the prompt\n");
+        emit  errorOccure("failed to tokenize the prompt");
+
+        return;
     }
 
     // prepare a batch for the prompt
@@ -95,14 +97,16 @@ void  LlamaInterface::askQuestion(const QString &question)
 
         if (n_ctx_used + batch.n_tokens > n_ctx)
         {
-            printf("\033[0m\n");
-            fprintf(stderr, "context size exceeded\n");
-            exit(0);
+            emit  errorOccure("context size exceeded");
+
+            break;
         }
 
         if (llama_decode(m_context, batch))
         {
-            GGML_ABORT("failed to decode\n");
+            emit  errorOccure("failed to decode");
+
+            break;
         }
 
         // sample the next token
@@ -120,7 +124,9 @@ void  LlamaInterface::askQuestion(const QString &question)
 
         if (n < 0)
         {
-            GGML_ABORT("failed to convert token to piece\n");
+            emit  errorOccure("failed to convert token to piece");
+
+            break;
         }
 
         std::string  piece(buf, n);
@@ -129,17 +135,7 @@ void  LlamaInterface::askQuestion(const QString &question)
 
         emit  answerReady(answer);
 
-        // printf("%s", piece.c_str());
-        // fflush(stdout);
-        // response += piece;
-
         // prepare the next batch with the sampled token
         batch = llama_batch_get_one(&new_token_id, 1);
     }
-
-    // QString  answer = QString::fromStdString(response);
-    // Emit the answer ready signal.
-    // emit  answerReady(answer);
-
-    // return answer;
 }

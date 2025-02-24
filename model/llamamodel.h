@@ -21,19 +21,21 @@ public:
     ~LlamaInterface();
 
     // Load the model from the given file path. Returns true if loaded.
-    bool  loadModel(const QString &modelFile);
+    bool loadModel(const QString &modelFile);
 
 public  slots:
     // Ask a question and return an answer. (This is a simple synchronous method;
     // in a production app you might want asynchronous generation.)
-    void  askQuestion(const QString &question);
+    void askQuestion(const QString &question);
 
 signals:
     // Emitted when the model is loaded
-    void  modelLoaded();
+    void modelLoaded();
 
     // Emitted when a generated answer is ready
-    void  answerReady(const QString &answer);
+    void answerReady(const QString &answer);
+
+    void errorOccure(QString);
 
 private:
     // Pointer to the underlying llama context.

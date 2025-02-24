@@ -53,8 +53,8 @@ MainWindow::MainWindow(QWidget *parent):
 
     QAudioFormat  format;
 
-    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
-    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
+    format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
+    format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
     format.setSampleFormat(QAudioFormat::Int16);
 
 
@@ -62,9 +62,9 @@ MainWindow::MainWindow(QWidget *parent):
 
     m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
 
-    int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
-    int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
-    int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
+    int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
+    int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
 
     m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
     m_pConf.useESpeak      = true;
@@ -94,9 +94,16 @@ MainWindow::~MainWindow()
 {
     delete ui;
     delete m_pVoice;
+
+    if (m_thread)
+    {
+        m_thread->quit();
+        m_thread->wait();
+        delete m_thread;
+    }
 }
 
-void  MainWindow::on_speakButton_clicked()
+void MainWindow::on_speakButton_clicked()
 {
     piper::SynthesisResult  result = { };
     std::vector<int16_t>    audioBuffer;
@@ -115,7 +122,7 @@ void  MainWindow::on_speakButton_clicked()
     io->write(audioData.data(), audioData.size());
 }
 
-void  MainWindow::on_language_currentIndexChanged(int index)
+void MainWindow::on_language_currentIndexChanged(int index)
 {
     std::optional<piper::SpeakerId>  speakerId;
 
@@ -141,14 +148,14 @@ void  MainWindow::on_language_currentIndexChanged(int index)
     piper::initialize(m_pConf);
 }
 
-void  MainWindow::on_pbSend_clicked()
+void MainWindow::on_pbSend_clicked()
 {
     auto  str = ui->lineModelText->text();
     QMetaObject::invokeMethod(m_model, "askQuestion", Qt::QueuedConnection, Q_ARG(QString, str));
     // m_model->askQuestion(ui->lineModelText->text());
 }
 
-void  MainWindow::on_recordBtn_clicked()
+void MainWindow::on_recordBtn_clicked()
 {
     if (!m_recording)
     {
@@ -166,7 +173,7 @@ void  MainWindow::on_recordBtn_clicked()
     }
 }
 
-void  MainWindow::setupAudioFormat()
+void MainWindow::setupAudioFormat()
 {
     // Set audio input format
     QAudioFormat  format;
@@ -197,7 +204,7 @@ void  MainWindow::setupAudioFormat()
     m_recorder->setMediaFormat(mediaFormat);
 }
 
-void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
+void MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
 {
     m_recording = (state == QMediaRecorder::RecordingState);
     ui->recordBtn->setText(m_recording ? "Stop Recording" : "Start Recording");
@@ -205,7 +212,7 @@ void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
     if (state == QMediaRecorder::RecordingState)
     {
         statusBar()->showMessage("Recording");
-        m_recorder->setAudioSampleRate(16000);  // 16 kHz
+        m_recorder->setAudioSampleRate(16000);      // 16 kHz
     }
 
     if (state == QMediaRecorder::StoppedState)
@@ -214,12 +221,12 @@ void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
     }
 }
 
-void  MainWindow::displayError()
+void MainWindow::displayError()
 {
     statusBar()->showMessage("Error: " + m_recorder->errorString());
 }
 
-void  MainWindow::requestMicrophonePermission()
+void MainWindow::requestMicrophonePermission()
 {
 #if QT_CONFIG(permissions)
     QMicrophonePermission  microphonePermission;
@@ -243,12 +250,12 @@ void  MainWindow::requestMicrophonePermission()
 #endif
 }
 
-void  MainWindow::on_sendSpeechBtn_clicked()
+void MainWindow::on_sendSpeechBtn_clicked()
 {
     m_whisperTranscriber->transcribeAudio("audio1.wav");
 }
 
-void  MainWindow::transcriptionCompleted(const QString &text)
+void MainWindow::transcriptionCompleted(const QString &text)
 {
     ui->speechTxtEdit->setText(text);
 }
