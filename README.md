@@ -17,11 +17,15 @@ git clone https://github.com/ggml-org/llama.cpp.git
 cd llama.cpp
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr
+cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+make -j4
+sudo make install
 
 git clone https://github.com/ggerganov/whisper.cpp.git
 cd whisper.cpp
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr
+make -j4
+sudo make install
 

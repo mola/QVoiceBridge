@@ -18,7 +18,7 @@
     <item>
      <widget class="QGroupBox" name="groupBox">
       <property name="title">
-       <string>Speach to Text</string>
+       <string>Speech to Text</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
@@ -46,10 +46,17 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="sendSpeechBtn">
+           <property name="text">
+            <string>Send</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>
-        <widget class="QTextEdit" name="txtToText">
+        <widget class="QTextEdit" name="speechTxtEdit">
          <property name="readOnly">
           <bool>true</bool>
          </property>
@@ -80,7 +87,7 @@
     <item>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="title">
-       <string>Text to Speach</string>
+       <string>Text to Speech</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <item row="1" column="1">
