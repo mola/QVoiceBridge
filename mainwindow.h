@@ -11,6 +11,7 @@
 #include "piper/piper.hpp"
 #include "model/llamamodel.h"
 
+#include "whispertranscriber.h"
 #include <QMediaCaptureSession>
 #include <QMediaRecorder>
 
@@ -44,6 +45,10 @@ private slots:
 
     void  on_pbSend_clicked();
 
+    void  on_sendSpeechBtn_clicked();
+
+    void  transcriptionCompleted(const QString &text); // emitted when whisper speech to text transcription is completed
+
 private:
     // audio recording
     void  setupAudioFormat();
@@ -51,14 +56,17 @@ private:
     void  requestMicrophonePermission();
 
 private:
-    Ui::MainWindow       *ui;
-    piper::PiperConfig    m_pConf;
-    piper::Voice         *m_pVoice      = nullptr;
-    QMediaDevices        *m_devices     = nullptr;
-    QAudioSink           *m_audioOutput = nullptr;
-    LlamaInterface       *m_model       = nullptr;
+    Ui::MainWindow     *ui;
+    piper::PiperConfig  m_pConf;
+    piper::Voice       *m_pVoice      = nullptr;
+    QMediaDevices      *m_devices     = nullptr;
+    QAudioSink         *m_audioOutput = nullptr;
+    LlamaInterface     *m_model       = nullptr;
+
+    // whisper
     QMediaCaptureSession  m_captureSession;
     QMediaRecorder       *m_recorder  = nullptr;
     bool                  m_recording = false;
+    WhisperTranscriber   *m_whisperTranscriber;
 };
 #endif // MAINWINDOW_H

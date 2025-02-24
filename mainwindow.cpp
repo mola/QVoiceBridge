@@ -37,34 +37,34 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
-    m_model = new LlamaInterface(this);
-    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+    // m_model = new LlamaInterface(this);
+    // m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
 
-    m_devices = new QMediaDevices(this);
+    // m_devices = new QMediaDevices(this);
 
-    QAudioFormat  format;
+    // QAudioFormat  format;
 
-    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
-    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
-    format.setSampleFormat(QAudioFormat::Int16);
+    // format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
+    // format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
+    // format.setSampleFormat(QAudioFormat::Int16);
 
 
-    auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+    // auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
 
-    m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+    // m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
 
-    int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
-    int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
-    int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    // int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
+    // int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
+    // int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
 
-    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
-    m_pConf.useESpeak      = true;
+    // m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    // m_pConf.useESpeak      = true;
 
-    std::optional<piper::SpeakerId>  speakerId;
+    // std::optional<piper::SpeakerId>  speakerId;
 
-    on_language_currentIndexChanged(0);
+    // on_language_currentIndexChanged(0);
 
-	// audio recorder
+    // whisper audio recorder
     m_recorder = new QMediaRecorder(this);
     m_captureSession.setRecorder(m_recorder);
     m_captureSession.setAudioInput(new QAudioInput(this));
@@ -74,6 +74,11 @@ MainWindow::MainWindow(QWidget *parent):
 
     requestMicrophonePermission();
     setupAudioFormat();
+
+    // whisper
+    m_whisperTranscriber = new WhisperTranscriber(this);
+    m_whisperTranscriber->initialize("ggml-small-q8_0.bin", "en");
+    connect(m_whisperTranscriber, &WhisperTranscriber::transcriptionCompleted, this, &MainWindow::transcriptionCompleted);
 }
 
 MainWindow::~MainWindow()
@@ -226,4 +231,14 @@ void  MainWindow::requestMicrophonePermission()
     }
 
 #endif
+}
+
+void  MainWindow::on_sendSpeechBtn_clicked()
+{
+    m_whisperTranscriber->transcribeAudio("audio1.wav");
+}
+
+void  MainWindow::transcriptionCompleted(const QString &text)
+{
+    ui->speechTxtEdit->setText(text);
 }
