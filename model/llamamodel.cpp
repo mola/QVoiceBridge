@@ -29,6 +29,8 @@ bool LlamaInterface::loadModel(const QString &modelFile)
 {
     // Create a set of parameters for the llama context.
     llama_model_params  params = llama_model_default_params();
+    params.n_gpu_layers = 99;
+
     // (Optionally tweak params here; for example: params.seed = 0;)
 
     // Initialize the model from file.
@@ -46,6 +48,9 @@ bool LlamaInterface::loadModel(const QString &modelFile)
     // Create a context for the model.
     llama_context_params  ctx_params = llama_context_default_params();
 
+    ctx_params.n_ctx   = 2048;
+    ctx_params.n_batch = 2048;
+
     m_context = llama_init_from_model(m_model, ctx_params);
 
     if (!m_context)
@@ -60,6 +65,10 @@ bool LlamaInterface::loadModel(const QString &modelFile)
     auto  m_samplerParams = llama_sampler_chain_default_params();
 
     m_sampler = llama_sampler_chain_init(m_samplerParams);
+    llama_sampler_chain_add(m_sampler, llama_sampler_init_min_p(0.05f, 1));
+    llama_sampler_chain_add(m_sampler, llama_sampler_init_temp(0.8f));
+    llama_sampler_chain_add(m_sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+
     llama_sampler_chain_add(m_sampler, llama_sampler_init_greedy());
 
     emit  modelLoaded();
