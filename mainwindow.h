@@ -3,9 +3,13 @@
 
 #include <QAudioFormat>
 #include <QAudioOutput>
+#include <QAudioSink>
 #include <QMainWindow>
-#include <QTextToSpeech>
 #include <QFile>
+#include <QMediaDevices>
+
+#include "piper/piper.hpp"
+
 
 #include <QMediaCaptureSession>
 #include <QMediaRecorder>
@@ -27,25 +31,10 @@ public:
 
     ~MainWindow();
 
-public slots:
-    void  setRate(int rate);
-
-    void  setPitch(int pitch);
-
-    void  setVolume(int volume);
-
 private slots:
-    void  engineSelected(int index);
+    void  on_speakButton_clicked();
 
-    void  languageSelected(int language);
-
-    void  voiceSelected(int index);
-
-    void  stateChanged(QTextToSpeech::State state);
-
-    void  localeChanged(const QLocale &locale);
-
-    void  onEngineReady();
+    void  on_language_currentIndexChanged(int index);
 
     void  on_recordBtn_clicked();
 
@@ -54,9 +43,11 @@ private slots:
     void  displayError();
 
 private:
-    Ui::MainWindow *ui;
-    QTextToSpeech  *m_speech = nullptr;
-    QList<QVoice>   m_voices;
+    Ui::MainWindow     *ui;
+    piper::PiperConfig  m_pConf;
+    piper::Voice       *m_pVoice      = nullptr;
+    QMediaDevices      *m_devices     = nullptr;
+    QAudioSink         *m_audioOutput = nullptr;
 
     // audio recording
     void  setupAudioFormat();

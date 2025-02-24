@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets)
-find_package(Qt6 REQUIRED COMPONENTS Widgets TextToSpeech Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -134,7 +134,6 @@ target_link_directories(
 
 target_link_libraries(QVoiceBridge PRIVATE
     Qt6::Widgets
-    Qt6::TextToSpeech
     Qt6::Multimedia
     espeak-ng
     onnxruntime
