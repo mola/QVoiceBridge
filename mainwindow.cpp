@@ -21,64 +21,81 @@ using json = nlohmann::json;
 #include "piper/piper.hpp"
 
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+// audio recorder:
+#include <QAudioInput>
+#include <QMediaDevices>
+#include <QMediaFormat>
+#include <QStandardPaths>
+#include <QStatusBar>
+#include <QDebug>
+
+#if QT_CONFIG(permissions)
+#include <QPermission>
+#endif
+
+MainWindow::MainWindow(QWidget *parent):
+    QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
-    int sampleRate = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
-    int channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
-    int sampleSize = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    // int sampleRate = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
+    // int channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
+    // int sampleSize = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
 
-    const std::string modelPath = "/path/to/piper/model";
-
-
-    piper::PiperConfig pConf;
-    pConf.eSpeakDataPath = "";
-    pConf.useESpeak = true;
-
-    piper::Voice pVoice;
-    std::optional<piper::SpeakerId> speakerId;
-    piper::loadVoice(pConf, "en_US-lessac-high.onnx", "en_US-lessac-high.onnx.json", pVoice,speakerId, false);
-
-    piper::SynthesisResult result = {};
+    // const std::string modelPath = "/path/to/piper/model";
 
 
-    piper::initialize(pConf);
-    // std::ofstream audioFile("output.wav", std::ios::binary);
+    // piper::PiperConfig pConf;
+    // pConf.eSpeakDataPath = "";
+    // pConf.useESpeak = true;
 
-    std::vector<int16_t> audioBuffer;
+    // piper::Voice pVoice;
+    // std::optional<piper::SpeakerId> speakerId;
+    // piper::loadVoice(pConf, "en_US-lessac-high.onnx", "en_US-lessac-high.onnx.json", pVoice,speakerId, false);
 
-    piper::textToAudio(pConf,pVoice, "Hello ali", audioBuffer,result, nullptr);
+    // piper::SynthesisResult result = {};
 
-    QByteArray audioData(reinterpret_cast<const char*>(audioBuffer.data()),
-                         static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
 
-    // Use a QBuffer to wrap the data for streaming playback.
-    QBuffer *audioBufferQ = new QBuffer;
-    audioBufferQ->setData(audioData);
+    // piper::initialize(pConf);
+    //// std::ofstream audioFile("output.wav", std::ios::binary);
 
-    QAudioFormat format;
-    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
-    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
-    format.setSampleFormat(QAudioFormat::Int16);
+    // std::vector<int16_t> audioBuffer;
 
-    const QAudioDevice inputDevice = QMediaDevices::defaultAudioOutput();
+    // piper::textToAudio(pConf,pVoice, "Hello ali", audioBuffer,result, nullptr);
 
-    // QAudioDevice info(QMediaDevices::defaultAudioOutput());
-    // if (!info.isFormatSupported(format)) {
-    //     qWarning() << "Raw audio format not supported by backend, cannot play audio.";
-    // }
+    // QByteArray audioData(reinterpret_cast<const char*>(audioBuffer.data()),
+    // static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
+
+    //// Use a QBuffer to wrap the data for streaming playback.
+    // QBuffer *audioBufferQ = new QBuffer;
+    // audioBufferQ->setData(audioData);
+
+    // QAudioFormat format;
+    // format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
+    // format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
+    // format.setSampleFormat(QAudioFormat::Int16);
+
+    // const QAudioDevice inputDevice = QMediaDevices::defaultAudioOutput();
+
+    //// QAudioDevice info(QMediaDevices::defaultAudioOutput());
+    //// if (!info.isFormatSupported(format)) {
+    ////     qWarning() << "Raw audio format not supported by backend, cannot play audio.";
+    //// }
 
     // auto audio = new QAudioSink(format, this);
     // audio->start(audioBufferQ);
 
     // Populate engine selection list
     ui->engine->addItem("Default", "default");
-    const auto engines = QTextToSpeech::availableEngines();
+
+    const auto  engines = QTextToSpeech::availableEngines();
+
     for (const QString &engine : engines)
+    {
         ui->engine->addItem(engine, engine);
+    }
+
     ui->engine->setCurrentIndex(0);
     engineSelected(0);
 
@@ -88,6 +105,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->engine, &QComboBox::currentIndexChanged, this, &MainWindow::engineSelected);
     connect(ui->language, &QComboBox::currentIndexChanged, this, &MainWindow::languageSelected);
     connect(ui->voice, &QComboBox::currentIndexChanged, this, &MainWindow::voiceSelected);
+
+    // audio recorder
+    m_recorder = new QMediaRecorder(this);
+    m_captureSession.setRecorder(m_recorder);
+    m_captureSession.setAudioInput(new QAudioInput(this));
+
+    connect(m_recorder, &QMediaRecorder::recorderStateChanged, this, &MainWindow::handleStateChanged);
+    connect(m_recorder, &QMediaRecorder::errorChanged, this, &MainWindow::displayError);
+
+    requestMicrophonePermission();
+    setupAudioFormat();
 }
 
 MainWindow::~MainWindow()
@@ -95,53 +123,57 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::setRate(int rate)
+void  MainWindow::setRate(int rate)
 {
-m_speech->setRate(rate / 10.0);
+    m_speech->setRate(rate / 10.0);
 }
 
-void MainWindow::setPitch(int pitch)
+void  MainWindow::setPitch(int pitch)
 {
-m_speech->setPitch(pitch / 10.0);
+    m_speech->setPitch(pitch / 10.0);
 }
 
-void MainWindow::setVolume(int volume)
+void  MainWindow::setVolume(int volume)
 {
-m_speech->setVolume(volume / 100.0);
+    m_speech->setVolume(volume / 100.0);
 }
 
-void MainWindow::engineSelected(int index)
+void  MainWindow::engineSelected(int index)
 {
-    const QString engineName = ui->engine->itemData(index).toString();
+    const QString  engineName = ui->engine->itemData(index).toString();
 
     delete m_speech;
     m_speech = engineName == u"default"
-                   ? new QTextToSpeech(this)
-                   : new QTextToSpeech(engineName, this);
+               ? new QTextToSpeech(this)
+               : new QTextToSpeech(engineName, this);
 
     // some engines initialize asynchronously
-    if (m_speech->state() == QTextToSpeech::Ready) {
+    if (m_speech->state() == QTextToSpeech::Ready)
+    {
         onEngineReady();
-    } else {
+    }
+    else
+    {
         connect(m_speech, &QTextToSpeech::stateChanged, this, &MainWindow::onEngineReady,
                 Qt::SingleShotConnection);
     }
 }
 
-void MainWindow::languageSelected(int language)
+void  MainWindow::languageSelected(int language)
 {
-    QLocale locale = ui->language->itemData(language).toLocale();
+    QLocale  locale = ui->language->itemData(language).toLocale();
     m_speech->setLocale(locale);
 }
 
-void MainWindow::voiceSelected(int index)
+void  MainWindow::voiceSelected(int index)
 {
     m_speech->setVoice(m_voices.at(index));
 }
 
-void MainWindow::stateChanged(QTextToSpeech::State state)
+void  MainWindow::stateChanged(QTextToSpeech::State state)
 {
-    switch (state) {
+    switch (state)
+    {
     case QTextToSpeech::Speaking:
         ui->statusbar->showMessage(tr("Speech started..."));
         break;
@@ -161,67 +193,87 @@ void MainWindow::stateChanged(QTextToSpeech::State state)
     ui->stopButton->setEnabled(state == QTextToSpeech::Speaking || state == QTextToSpeech::Paused);
 }
 
-void MainWindow::localeChanged(const QLocale &locale)
+void  MainWindow::localeChanged(const QLocale &locale)
 {
-    QVariant localeVariant(locale);
+    QVariant  localeVariant(locale);
     ui->language->setCurrentIndex(ui->language->findData(localeVariant));
 
-    QSignalBlocker blocker(ui->voice);
+    QSignalBlocker  blocker(ui->voice);
 
     ui->voice->clear();
 
     m_voices = m_speech->availableVoices();
-    QVoice currentVoice = m_speech->voice();
-    for (const QVoice &voice : std::as_const(m_voices)) {
-        ui->voice->addItem( QString("%1 - %2 - %3")
-                              .arg(voice.name(), QVoice::genderName(voice.gender()),
-                                   QVoice::ageName(voice.age())));
+
+    QVoice  currentVoice = m_speech->voice();
+
+    for (const QVoice &voice : std::as_const(m_voices))
+    {
+        ui->voice->addItem(QString("%1 - %2 - %3")
+                           .arg(voice.name(), QVoice::genderName(voice.gender()),
+                                QVoice::ageName(voice.age())));
+
         if (voice.name() == currentVoice.name())
+        {
             ui->voice->setCurrentIndex(ui->voice->count() - 1);
+        }
     }
 }
 
-void MainWindow::onEngineReady()
+void  MainWindow::onEngineReady()
 {
-    if (m_speech->state() != QTextToSpeech::Ready) {
+    if (m_speech->state() != QTextToSpeech::Ready)
+    {
         stateChanged(m_speech->state());
+
         return;
     }
 
-    const bool hasPauseResume = m_speech->engineCapabilities()
-                                & QTextToSpeech::Capability::PauseResume;
+    const bool  hasPauseResume = m_speech->engineCapabilities()
+                                 & QTextToSpeech::Capability::PauseResume;
+
     ui->pauseButton->setVisible(hasPauseResume);
     ui->resumeButton->setVisible(hasPauseResume);
 
     // Block signals of the languages combobox while populating
-    QSignalBlocker blocker(ui->language);
+    QSignalBlocker  blocker(ui->language);
 
     ui->language->clear();
-    const QList<QLocale> locales = m_speech->availableLocales();
-    QLocale current = m_speech->locale();
-    for (const QLocale &locale : locales) {
-        QString name = QString("%1 (%2)").arg(QLocale::languageToString(locale.language()),
-                              QLocale::territoryToString(locale.territory()));
-        QVariant localeVariant(locale);
+
+    const QList<QLocale>  locales = m_speech->availableLocales();
+    QLocale               current = m_speech->locale();
+
+    for (const QLocale &locale : locales)
+    {
+        QString  name = QString("%1 (%2)").arg(QLocale::languageToString(locale.language()),
+                                               QLocale::territoryToString(locale.territory()));
+        QVariant  localeVariant(locale);
+
         ui->language->addItem(name, localeVariant);
+
         if (locale.name() == current.name())
+        {
             current = locale;
+        }
     }
+
     setRate(ui->rate->value());
     setPitch(ui->pitch->value());
     setVolume(ui->volume->value());
     //! [say]
-    connect(ui->speakButton, &QPushButton::clicked, m_speech, [this]{
+    connect(ui->speakButton, &QPushButton::clicked, m_speech, [this]
+    {
         m_speech->say(ui->txtToSpeach->toPlainText());
     });
     //! [say]
     //! [stop]
-    connect(ui->stopButton, &QPushButton::clicked, m_speech, [this]{
+    connect(ui->stopButton, &QPushButton::clicked, m_speech, [this]
+    {
         m_speech->stop();
     });
     //! [stop]
     //! [pause]
-    connect(ui->pauseButton, &QPushButton::clicked, m_speech, [this]{
+    connect(ui->pauseButton, &QPushButton::clicked, m_speech, [this]
+    {
         m_speech->pause();
     });
     //! [pause]
@@ -237,3 +289,98 @@ void MainWindow::onEngineReady()
     localeChanged(current);
 }
 
+void  MainWindow::on_recordBtn_clicked()
+{
+    if (!m_recording)
+    {
+        // Set output file
+        QString  fileName = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                            + "/recording_" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".wav";
+
+        m_recorder->setOutputLocation(QUrl::fromLocalFile(fileName));
+
+        // Start recording
+        m_recorder->record();
+    }
+    else
+    {
+        m_recorder->stop();
+    }
+}
+
+void  MainWindow::setupAudioFormat()
+{
+    // Set audio input format
+    QAudioFormat  format;
+    format.setSampleRate(16000);
+    format.setChannelCount(1);
+    format.setSampleFormat(QAudioFormat::Int16);
+
+    // Validate format support
+    const QAudioDevice  inputDevice = QMediaDevices::defaultAudioInput();
+
+    if (!inputDevice.isFormatSupported(format))
+    {
+        format = inputDevice.preferredFormat();
+        std::cout << "Default format not supported, using closest match:"
+                  << format.sampleRate() << "Hz"
+                  << format.channelCount() << "channels" << std::endl;
+    }
+
+    // Update capture session
+    delete m_captureSession.audioInput();
+    m_captureSession.setAudioInput(new QAudioInput(this));
+
+    // Set media format for recorder
+    QMediaFormat  mediaFormat;
+
+    mediaFormat.setFileFormat(QMediaFormat::Wave);
+    mediaFormat.setAudioCodec(QMediaFormat::AudioCodec::Wave);
+    m_recorder->setMediaFormat(mediaFormat);
+}
+
+void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
+{
+    m_recording = (state == QMediaRecorder::RecordingState);
+    ui->recordBtn->setText(m_recording ? "Stop Recording" : "Start Recording");
+
+    if (state == QMediaRecorder::RecordingState)
+    {
+        statusBar()->showMessage("Recording");
+        m_recorder->setAudioSampleRate(16000);  // 16 kHz
+    }
+
+    if (state == QMediaRecorder::StoppedState)
+    {
+        statusBar()->showMessage("Recording saved to: " + m_recorder->actualLocation().toLocalFile());
+    }
+}
+
+void  MainWindow::displayError()
+{
+    statusBar()->showMessage("Error: " + m_recorder->errorString());
+}
+
+void  MainWindow::requestMicrophonePermission()
+{
+#if QT_CONFIG(permissions)
+    QMicrophonePermission  microphonePermission;
+
+    switch (qApp->checkPermission(microphonePermission))
+    {
+    case Qt::PermissionStatus::Undetermined:
+        qApp->requestPermission(microphonePermission, this, &MainWindow::requestMicrophonePermission);
+
+        return;
+    case Qt::PermissionStatus::Denied:
+        statusBar()->showMessage("Microphone permission denied!");
+        ui->recordBtn->setEnabled(false);
+
+        return;
+    case Qt::PermissionStatus::Granted:
+        statusBar()->showMessage("Microphone permission granted!");
+        break;
+    }
+
+#endif
+}

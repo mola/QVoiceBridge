@@ -31,6 +31,10 @@ set(PROJECT_SOURCES
         piper/uni_algo.h
         piper/utf8.h
 
+        audiolevel.h
+        audiolevel.cpp
+
+
 )
 
 include_directories (
