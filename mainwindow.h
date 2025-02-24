@@ -15,6 +15,7 @@
 #include <QMediaCaptureSession>
 #include <QMediaRecorder>
 
+#include <QThread>
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
@@ -62,6 +63,7 @@ private:
     QMediaDevices      *m_devices     = nullptr;
     QAudioSink         *m_audioOutput = nullptr;
     LlamaInterface     *m_model       = nullptr;
+    QThread            *m_thread      = nullptr;
 
     // whisper
     QMediaCaptureSession  m_captureSession;

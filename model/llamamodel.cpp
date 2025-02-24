@@ -6,6 +6,7 @@
 LlamaInterface::LlamaInterface(QObject *parent):
     QObject(parent), m_context(nullptr)
 {
+    // ggml_backend_load_all();
 }
 
 LlamaInterface::~LlamaInterface()
@@ -40,6 +41,8 @@ bool  LlamaInterface::loadModel(const QString &modelFile)
         return false;
     }
 
+    m_vocab = llama_model_get_vocab(m_model);
+
     // Create a context for the model.
     llama_context_params  ctx_params = llama_context_default_params();
 
@@ -54,102 +57,89 @@ bool  LlamaInterface::loadModel(const QString &modelFile)
         return false;
     }
 
-    m_vocab = llama_model_get_vocab(m_model);
+    auto  m_samplerParams = llama_sampler_chain_default_params();
+
+    m_sampler = llama_sampler_chain_init(m_samplerParams);
+    llama_sampler_chain_add(m_sampler, llama_sampler_init_greedy());
 
     emit  modelLoaded();
 
     return true;
 }
 
-QString  LlamaInterface::askQuestion(const QString &question)
+void  LlamaInterface::askQuestion(const QString &question)
 {
-    if (!m_context || !m_model)
-    {
-        qWarning() << "Model or context not loaded.";
+    std::string  prompt = question.toStdString();
+    std::string  response;
+    QString      answer;
+    const bool   is_first = llama_get_kv_cache_used_cells(m_context) == 0;
 
-        return QString();
+    // tokenize the prompt
+    const int                 n_prompt_tokens = -llama_tokenize(m_vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first, true);
+    std::vector<llama_token>  prompt_tokens(n_prompt_tokens);
+
+    if (llama_tokenize(m_vocab, prompt.c_str(), prompt.size(), prompt_tokens.data(), prompt_tokens.size(), is_first, true) < 0)
+    {
+        GGML_ABORT("failed to tokenize the prompt\n");
     }
 
-    // Convert the question to a format suitable for the model.
-    std::string  input    = question.toStdString();
-    const char  *text     = input.c_str();
-    int32_t      text_len = static_cast<int32_t>(input.length());
+    // prepare a batch for the prompt
+    llama_batch  batch = llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size());
+    llama_token  new_token_id;
 
-    // Allocate a buffer for the tokens.
-    const int32_t             n_tokens_max = 1024; // Adjust this size as needed.
-    std::vector<llama_token>  tokens(n_tokens_max);
-
-    // Tokenize the input text.
-    int32_t  n_tokens = llama_tokenize(
-        m_vocab, // Get the vocabulary from the model.
-        text,    // Input text.
-        text_len, // Length of the input text.
-        tokens.data(), // Buffer to store the tokens.
-        n_tokens_max, // Maximum number of tokens.
-        true,    // Add special tokens (e.g., BOS, EOS).
-        false    // Do not parse special tokens.
-        );
-
-    if (n_tokens < 0)
+    while (true)
     {
-        qWarning() << "Tokenization failed. Required buffer size:" << -n_tokens;
+        // check if we have enough space in the context to evaluate this batch
+        int  n_ctx      = llama_n_ctx(m_context);
+        int  n_ctx_used = llama_get_kv_cache_used_cells(m_context);
 
-        return QString();
+        if (n_ctx_used + batch.n_tokens > n_ctx)
+        {
+            printf("\033[0m\n");
+            fprintf(stderr, "context size exceeded\n");
+            exit(0);
+        }
+
+        if (llama_decode(m_context, batch))
+        {
+            GGML_ABORT("failed to decode\n");
+        }
+
+        // sample the next token
+        new_token_id = llama_sampler_sample(m_sampler, m_context, -1);
+
+        // is it an end of generation?
+        if (llama_vocab_is_eog(m_vocab, new_token_id))
+        {
+            break;
+        }
+
+        // convert the token to a string, print it and add it to the response
+        char  buf[256];
+        int   n = llama_token_to_piece(m_vocab, new_token_id, buf, sizeof(buf), 0, true);
+
+        if (n < 0)
+        {
+            GGML_ABORT("failed to convert token to piece\n");
+        }
+
+        std::string  piece(buf, n);
+
+        answer = QString::fromStdString(piece);
+
+        emit  answerReady(answer);
+
+        // printf("%s", piece.c_str());
+        // fflush(stdout);
+        // response += piece;
+
+        // prepare the next batch with the sampled token
+        batch = llama_batch_get_one(&new_token_id, 1);
     }
 
-    // Resize the tokens vector to the actual number of tokens.
-    tokens.resize(n_tokens);
-
-    // Create a llama_batch structure for the tokens.
-    llama_batch  batch = llama_batch_init(tokens.size(), 0, 0);
-
-    // Fill the batch with the tokens.
-    for (int32_t i = 0; i < tokens.size(); ++i)
-    {
-        batch.token[i]  = tokens[i];
-        batch.pos[i]    = i;
-        batch.seq_id[i] = 0;
-        batch.logits[i] = (i == tokens.size() - 1); // Only generate logits for the last token.
-    }
-
-    // Evaluate the batch using the llama_decode function.
-    int32_t  decode_result = llama_decode(m_context, batch);
-
-    if (decode_result != 0)
-    {
-        qWarning() << "Failed to evaluate tokens. Decode result:" << decode_result;
-        llama_batch_free(batch); // Free the batch memory.
-
-        return QString();
-    }
-
-    // Generate a response.
-    QString  answer;
-    int      n_past = 0; // Number of tokens already evaluated.
-
-    // while (true)
-    // {
-    //// Get the next token from the model.
-    // llama_token  next_token = llama_sample(m_context, tokens.data(), tokens.size(), n_past);
-
-    //// Break if the end-of-sequence token is generated.
-    // if (next_token == llama_vocab_eos(m_vocab))
-    // {
-    // break;
-    // }
-
-    //// Convert the token to a string and append it to the answer.
-    // const char *token_str = llama_vocab_get_text(m_vocab, next_token);
-
-    // answer += QString::fromUtf8(token_str);
-
-    //// Append the generated token to the tokens vector for the next iteration.
-    // tokens.push_back(next_token);
-    // n_past++;
-    // }
-
+    // QString  answer = QString::fromStdString(response);
     // Emit the answer ready signal.
-    emit  answerReady(answer);
+    // emit  answerReady(answer);
 
-    return answer;
+    // return answer;
 }

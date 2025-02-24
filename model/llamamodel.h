@@ -8,36 +8,42 @@
 struct llama_model;
 struct llama_context;
 struct llama_vocab;
+struct llama_sampler_chain_params;
+struct llama_sampler;
 
-class LlamaInterface : public QObject
+class LlamaInterface: public QObject
 {
     Q_OBJECT
+
 public:
     explicit LlamaInterface(QObject *parent = nullptr);
+
     ~LlamaInterface();
 
     // Load the model from the given file path. Returns true if loaded.
-    bool loadModel(const QString &modelFile);
+    bool  loadModel(const QString &modelFile);
 
+public  slots:
     // Ask a question and return an answer. (This is a simple synchronous method;
     // in a production app you might want asynchronous generation.)
-    QString askQuestion(const QString &question);
+    void  askQuestion(const QString &question);
 
 signals:
     // Emitted when the model is loaded
-    void modelLoaded();
+    void  modelLoaded();
 
     // Emitted when a generated answer is ready
-    void answerReady(const QString &answer);
+    void  answerReady(const QString &answer);
 
 private:
     // Pointer to the underlying llama context.
     // (Depending on your version of llama.cpp, this might be a
     // 'llama_context*', but here we use void* for generality.)
-    llama_context* m_context = nullptr;
-    llama_model*  m_model = nullptr;
-    const struct llama_vocab * m_vocab = nullptr;
-
+    llama_context            *m_context  = nullptr;
+    llama_model              *m_model    = nullptr;
+    llama_sampler            *m_sampler  = nullptr;
+    const struct llama_vocab *m_vocab    = nullptr;
+    int                       m_n_prompt = 0;
 };
 
 #endif // LLAMAMODEL_H

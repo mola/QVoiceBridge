@@ -145,4 +145,6 @@ target_link_libraries(QVoiceBridge PRIVATE
     fmt
     llama
     whisper
+    ggml
+    ggml-base
 )

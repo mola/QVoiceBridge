@@ -37,32 +37,41 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
-    // m_model = new LlamaInterface(this);
-    // m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+    m_model = new LlamaInterface();
+    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
 
-    // m_devices = new QMediaDevices(this);
-
-    // QAudioFormat  format;
-
-    // format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
-    // format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
-    // format.setSampleFormat(QAudioFormat::Int16);
+    m_thread = new QThread();
+    m_model->moveToThread(m_thread);
+    m_thread->start();
 
 
-    // auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+    connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
+    {
+        ui->txtToSpeach->insertPlainText(c);
+    });
+    m_devices = new QMediaDevices(this);
 
-    // m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+    QAudioFormat  format;
 
-    // int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
-    // int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
-    // int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
+    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
+    format.setSampleFormat(QAudioFormat::Int16);
 
-    // m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
-    // m_pConf.useESpeak      = true;
 
-    // std::optional<piper::SpeakerId>  speakerId;
+    auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
 
-    // on_language_currentIndexChanged(0);
+    m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+
+    int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
+    int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
+    int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+
+    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    m_pConf.useESpeak      = true;
+
+    std::optional<piper::SpeakerId>  speakerId;
+
+    on_language_currentIndexChanged(0);
 
     // whisper audio recorder
     m_recorder = new QMediaRecorder(this);
@@ -134,8 +143,9 @@ void  MainWindow::on_language_currentIndexChanged(int index)
 
 void  MainWindow::on_pbSend_clicked()
 {
-    QString  res = m_model->askQuestion(ui->lineModelText->text());
-    ui->txtToSpeach->setPlainText(res);
+    auto  str = ui->lineModelText->text();
+    QMetaObject::invokeMethod(m_model, "askQuestion", Qt::QueuedConnection, Q_ARG(QString, str));
+    // m_model->askQuestion(ui->lineModelText->text());
 }
 
 void  MainWindow::on_recordBtn_clicked()
