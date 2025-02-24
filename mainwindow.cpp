@@ -22,6 +22,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    m_model = new  LlamaInterface(this);
+    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+
     m_devices = new QMediaDevices(this);
 
     QAudioFormat format;
@@ -102,5 +105,12 @@ void MainWindow::on_language_currentIndexChanged(int index)
 
     piper::initialize(m_pConf);
 
+}
+
+
+void MainWindow::on_pbSend_clicked()
+{
+    QString res = m_model->askQuestion(ui->lineModelText->text());
+    ui->txtToSpeach->setPlainText(res);
 }
 

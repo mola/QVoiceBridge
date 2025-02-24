@@ -8,7 +8,7 @@
 #include <QMediaDevices>
 
 #include "piper/piper.hpp"
-
+#include "model/llamamodel.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -34,7 +34,9 @@ private slots:
 
     void on_language_currentIndexChanged(int index);
 
-private:
+   void on_pbSend_clicked();
+
+   private:
     Ui::MainWindow *ui;
 
     piper::PiperConfig m_pConf;
@@ -43,5 +45,6 @@ private:
     QMediaDevices *m_devices = nullptr;
     QAudioSink *m_audioOutput = nullptr;
 
+    LlamaInterface *m_model = nullptr;
 };
 #endif // MAINWINDOW_H

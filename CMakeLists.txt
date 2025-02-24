@@ -30,6 +30,8 @@ set(PROJECT_SOURCES
         piper/tashkeel.hpp
         piper/uni_algo.h
         piper/utf8.h
+        model/llamamodel.h
+        model/llamamodel.cpp
 
 )
 
@@ -134,4 +136,5 @@ target_link_libraries(QVoiceBridge PRIVATE
     espeak-ng
     onnxruntime
     fmt
+    llama
 )
