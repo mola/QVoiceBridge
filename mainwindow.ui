@@ -22,6 +22,33 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QPushButton" name="recordBtn">
+           <property name="text">
+            <string>Start Recordin</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="wave" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>500</width>
+             <height>100</height>
+            </size>
+           </property>
+           <property name="sizeIncrement">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QTextEdit" name="txtToText">
          <property name="readOnly">
           <bool>true</bool>

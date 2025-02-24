@@ -33,6 +33,10 @@ set(PROJECT_SOURCES
         model/llamamodel.h
         model/llamamodel.cpp
 
+        audiolevel.h
+        audiolevel.cpp
+
+
 )
 
 include_directories (
