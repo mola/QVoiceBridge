@@ -49,6 +49,13 @@ MainWindow::MainWindow(QWidget *parent):
     {
         ui->txtToSpeach->insertPlainText(c);
     });
+
+    connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
+    {
+        ui->txtToSpeach->insertPlainText("\n");
+        playText(msg);
+    }, Qt::QueuedConnection);
+
     m_devices = new QMediaDevices(this);
 
     QAudioFormat  format;
@@ -103,26 +110,14 @@ MainWindow::~MainWindow()
     }
 }
 
-void MainWindow::on_speakButton_clicked()
+void  MainWindow::on_speakButton_clicked()
 {
-    piper::SynthesisResult  result = { };
-    std::vector<int16_t>    audioBuffer;
-    auto                    text = ui->txtToSpeach->toPlainText();
+    auto  text = ui->txtToSpeach->toPlainText();
 
-    piper::textToAudio(m_pConf, *m_pVoice, text.toStdString(), audioBuffer, result, nullptr);
-
-    QByteArray  audioData(reinterpret_cast<const char *>(audioBuffer.data()),
-                          static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
-
-    // Use a QBuffer to wrap the data for streaming playback.
-    // QBuffer *audioBufferQ = new QBuffer;
-    // audioBufferQ->setData(audioData);
-    auto  io = m_audioOutput->start();
-
-    io->write(audioData.data(), audioData.size());
+    playText(text.toStdString());
 }
 
-void MainWindow::on_language_currentIndexChanged(int index)
+void  MainWindow::on_language_currentIndexChanged(int index)
 {
     std::optional<piper::SpeakerId>  speakerId;
 
@@ -148,14 +143,14 @@ void MainWindow::on_language_currentIndexChanged(int index)
     piper::initialize(m_pConf);
 }
 
-void MainWindow::on_pbSend_clicked()
+void  MainWindow::on_pbSend_clicked()
 {
     auto  str = ui->lineModelText->text();
-    QMetaObject::invokeMethod(m_model, "askQuestion", Qt::QueuedConnection, Q_ARG(QString, str));
+    QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, str));
     // m_model->askQuestion(ui->lineModelText->text());
 }
 
-void MainWindow::on_recordBtn_clicked()
+void  MainWindow::on_recordBtn_clicked()
 {
     if (!m_recording)
     {
@@ -173,7 +168,7 @@ void MainWindow::on_recordBtn_clicked()
     }
 }
 
-void MainWindow::setupAudioFormat()
+void  MainWindow::setupAudioFormat()
 {
     // Set audio input format
     QAudioFormat  format;
@@ -204,7 +199,7 @@ void MainWindow::setupAudioFormat()
     m_recorder->setMediaFormat(mediaFormat);
 }
 
-void MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
+void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
 {
     m_recording = (state == QMediaRecorder::RecordingState);
     ui->recordBtn->setText(m_recording ? "Stop Recording" : "Start Recording");
@@ -221,12 +216,12 @@ void MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
     }
 }
 
-void MainWindow::displayError()
+void  MainWindow::displayError()
 {
     statusBar()->showMessage("Error: " + m_recorder->errorString());
 }
 
-void MainWindow::requestMicrophonePermission()
+void  MainWindow::requestMicrophonePermission()
 {
 #if QT_CONFIG(permissions)
     QMicrophonePermission  microphonePermission;
@@ -250,12 +245,30 @@ void MainWindow::requestMicrophonePermission()
 #endif
 }
 
-void MainWindow::on_sendSpeechBtn_clicked()
+void  MainWindow::playText(std::string msg)
+{
+    std::vector<int16_t>    audioBuffer;
+    piper::SynthesisResult  result = { };
+
+    piper::textToAudio(m_pConf, *m_pVoice, msg, audioBuffer, result, nullptr);
+
+    QByteArray  audioData(reinterpret_cast<const char *>(audioBuffer.data()),
+                          static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
+
+    // Use a QBuffer to wrap the data for streaming playback.
+    // QBuffer *audioBufferQ = new QBuffer;
+    // audioBufferQ->setData(audioData);
+    auto  io = m_audioOutput->start();
+
+    io->write(audioData.data(), audioData.size());
+}
+
+void  MainWindow::on_sendSpeechBtn_clicked()
 {
     m_whisperTranscriber->transcribeAudio("audio1.wav");
 }
 
-void MainWindow::transcriptionCompleted(const QString &text)
+void  MainWindow::transcriptionCompleted(const QString &text)
 {
     ui->speechTxtEdit->setText(text);
 }

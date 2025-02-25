@@ -56,6 +56,8 @@ private:
 
     void  requestMicrophonePermission();
 
+    void  playText(std::string msg);
+
 private:
     Ui::MainWindow     *ui;
     piper::PiperConfig  m_pConf;
