@@ -12,8 +12,10 @@
 #include "model/llamamodel.h"
 
 #include "whispertranscriber.h"
-#include <QMediaCaptureSession>
-#include <QMediaRecorder>
+// #include <QMediaCaptureSession>
+// #include <QMediaRecorder>
+#include <QAudioSource>
+#include <QIODevice>
 
 #include <QThread>
 QT_BEGIN_NAMESPACE
@@ -40,9 +42,9 @@ private slots:
 
     void  on_recordBtn_clicked();
 
-    void  handleStateChanged(QMediaRecorder::RecorderState state);
+    // void  handleStateChanged(QMediaRecorder::RecorderState state);
 
-    void  displayError();
+    // void  displayError();
 
     void  on_pbSend_clicked();
 
@@ -53,6 +55,8 @@ private slots:
 private:
     // audio recording
     void  setupAudioFormat();
+
+    void  handleAudioData();
 
     void  requestMicrophonePermission();
 
@@ -66,9 +70,12 @@ private:
     QThread            *m_thread      = nullptr;
 
     // whisper
-    QMediaCaptureSession  m_captureSession;
-    QMediaRecorder       *m_recorder  = nullptr;
-    bool                  m_recording = false;
-    WhisperTranscriber   *m_whisperTranscriber;
+    QAudioSource *m_audioSource      = nullptr;
+    QIODevice    *m_audioInputDevice = nullptr;
+
+    std::vector<float>               pcmf32; // Mono-channel float
+    std::vector<std::vector<float>>  pcmf32s; // Stereo-channel floats
+    bool                             m_isRecording = false;
+    WhisperTranscriber              *m_whisperTranscriber;
 };
 #endif // MAINWINDOW_H

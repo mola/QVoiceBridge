@@ -74,12 +74,6 @@ MainWindow::MainWindow(QWidget *parent):
     on_language_currentIndexChanged(0);
 
     // whisper audio recorder
-    m_recorder = new QMediaRecorder(this);
-    m_captureSession.setRecorder(m_recorder);
-    m_captureSession.setAudioInput(new QAudioInput(this));
-
-    connect(m_recorder, &QMediaRecorder::recorderStateChanged, this, &MainWindow::handleStateChanged);
-    connect(m_recorder, &QMediaRecorder::errorChanged, this, &MainWindow::displayError);
 
     requestMicrophonePermission();
     setupAudioFormat();
@@ -148,75 +142,71 @@ void  MainWindow::on_pbSend_clicked()
     // m_model->askQuestion(ui->lineModelText->text());
 }
 
-void  MainWindow::on_recordBtn_clicked()
-{
-    if (!m_recording)
-    {
-        // Set output file
-        QString  fileName = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".wav";
-
-        m_recorder->setOutputLocation(QUrl::fromLocalFile(fileName));
-
-        // Start recording
-        m_recorder->record();
-    }
-    else
-    {
-        m_recorder->stop();
-    }
-}
-
 void  MainWindow::setupAudioFormat()
 {
-    // Set audio input format
     QAudioFormat  format;
-    format.setSampleRate(16000);
-    format.setChannelCount(1);
-    format.setSampleFormat(QAudioFormat::Int16);
+    format.setSampleRate(16000);           // 16 kHz sample rate
+    format.setChannelCount(1);            // Mono audio
+    format.setSampleFormat(QAudioFormat::Int16); // 16-bit signed integer PCM
 
-    // Validate format support
     const QAudioDevice  inputDevice = QMediaDevices::defaultAudioInput();
 
     if (!inputDevice.isFormatSupported(format))
     {
         format = inputDevice.preferredFormat();
-        std::cout << "Default format not supported, using closest match:"
-                  << format.sampleRate() << "Hz"
-                  << format.channelCount() << "channels" << std::endl;
+        qDebug() << "Default format not supported; using closest match.";
     }
 
-    // Update capture session
-    delete m_captureSession.audioInput();
-    m_captureSession.setAudioInput(new QAudioInput(this));
-
-    // Set media format for recorder
-    QMediaFormat  mediaFormat;
-
-    mediaFormat.setFileFormat(QMediaFormat::Wave);
-    mediaFormat.setAudioCodec(QMediaFormat::AudioCodec::Wave);
-    m_recorder->setMediaFormat(mediaFormat);
+    // Create the QAudioSource with our chosen format
+    m_audioSource = new QAudioSource(inputDevice, format, this);
 }
 
-void  MainWindow::handleStateChanged(QMediaRecorder::RecorderState state)
+void  MainWindow::on_recordBtn_clicked()
 {
-    m_recording = (state == QMediaRecorder::RecordingState);
-    ui->recordBtn->setText(m_recording ? "Stop Recording" : "Start Recording");
-
-    if (state == QMediaRecorder::RecordingState)
+    // Start or stop recording based on state
+    if (!m_isRecording)
     {
-        statusBar()->showMessage("Recording");
-        m_recorder->setAudioSampleRate(16000);  // 16 kHz
+        // Start recording
+        pcmf32.clear();
+        m_audioInputDevice = m_audioSource->start();
+
+        connect(m_audioInputDevice, &QIODevice::readyRead, this, &MainWindow::handleAudioData);
+
+        statusBar()->showMessage("Recording...");
+        m_isRecording = true;
     }
-
-    if (state == QMediaRecorder::StoppedState)
+    else
     {
-        statusBar()->showMessage("Recording saved to: " + m_recorder->actualLocation().toLocalFile());
+        // Stop recording
+        m_audioSource->stop();
+        statusBar()->showMessage("Recording Stopped. Processing audio...");
+
+        m_isRecording = false;
+        m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
+        // Optionally: Handle the captured audio data in pcmf32 or pcmf32s
     }
 }
 
-void  MainWindow::displayError()
+void  MainWindow::handleAudioData()
 {
-    statusBar()->showMessage("Error: " + m_recorder->errorString());
+    // Read audio data from the input device
+    QByteArray  audioData = m_audioInputDevice->readAll();
+
+    // Convert raw PCM data to float samples
+    const qint16 *rawData     = reinterpret_cast<const qint16 *>(audioData.data());
+    int           sampleCount = audioData.size() / sizeof(qint16);
+
+    for (int i = 0; i < sampleCount; ++i)
+    {
+        // Convert 16-bit signed integer sample to a 32-bit float in range [-1.0, 1.0]
+        float  sample = rawData[i] / 32768.0f;
+
+        pcmf32.push_back(sample);
+    }
+
+    // If stereo audio is required (not applicable here, as channel count is 1):
+    // Store this as a single-channel vector. If multi-channel, you would need
+    // to split samples by channel here.
 }
 
 void  MainWindow::requestMicrophonePermission()

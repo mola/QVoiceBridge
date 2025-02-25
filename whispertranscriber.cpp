@@ -82,10 +82,15 @@ void  WhisperTranscriber::transcribeAudio(const QString &audioFilePath)
         return;
     }
 
+    transcribeAudio(pcmf32, pcmf32s);
+}
+
+void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector<std::vector<float>> pcmf32s)
+{
     // ─────────────────────────────────────────────────────────────
     // (Optional) Print some basic info about the file
-    fprintf(stderr, "\nProcessing '%s' (%d samples, %.1f sec) ...\n",
-            wavfile.c_str(), int(pcmf32.size()), float(pcmf32.size()) / WHISPER_SAMPLE_RATE);
+    fprintf(stderr, "\nProcessing audio (%d samples, %.1f sec) ...\n",
+            int(pcmf32.size()), float(pcmf32.size()) / WHISPER_SAMPLE_RATE);
 
     // ─────────────────────────────────────────────────────────────
     // Set up whisper processing parameters

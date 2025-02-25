@@ -19,8 +19,11 @@ public:
     // Initialize the Whisper model
     bool  initialize(const QString &modelPath, const QString &languag);
 
-    // Asynchronously transcribe audio data
+    // Asynchronously transcribe audio file
     void  transcribeAudio(const QString &audioFilePath);
+
+    // Asynchronously transcribe audio data
+    void  transcribeAudio(std::vector<float> pcmf32, std::vector<std::vector<float>> pcmf32s);
 
 signals:
     // Signal emitted when transcription is done
