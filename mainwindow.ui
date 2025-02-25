@@ -24,9 +24,9 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QPushButton" name="recordBtn">
+          <widget class="QPushButton" name="pbRecord">
            <property name="text">
-            <string>Start Recordin</string>
+            <string>Start Recording</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
@@ -50,11 +50,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="sendSpeechBtn">
-           <property name="text">
-            <string>Send</string>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="leLanguage"/>
          </item>
         </layout>
        </item>

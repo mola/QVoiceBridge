@@ -27,7 +27,7 @@ public:
 
 signals:
     // Signal emitted when transcription is done
-    void  transcriptionCompleted(const QString &text);
+    void  transcriptionCompleted(const QString &text, const QString &language);
 
 private:
     struct whisper_context *m_context;  // Whisper context

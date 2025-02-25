@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QDebug>
+#include <iostream>
 
 WhisperTranscriber::WhisperTranscriber(QObject *parent):
     QObject(parent), m_context(nullptr)
@@ -92,6 +93,16 @@ void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector
     fprintf(stderr, "\nProcessing audio (%d samples, %.1f sec) ...\n",
             int(pcmf32.size()), float(pcmf32.size()) / WHISPER_SAMPLE_RATE);
 
+    // if (m_params->language == "auto")
+    // {
+    // std::vector<float>  probs(whisper_lang_max_id() + 1, 0.0f);
+    // auto                lang_id      = whisper_lang_auto_detect(m_context, 0, m_params->n_threads, probs.data());
+    // auto                detectedLang = whisper_lang_str(lang_id);
+
+    // std::cout << "detected lang: " << detectedLang << std::endl;
+    // m_params->language = std::string(whisper_lang_str(lang_id));
+    // }
+
     // ─────────────────────────────────────────────────────────────
     // Set up whisper processing parameters
     whisper_full_params  wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
@@ -125,8 +136,11 @@ void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector
         result += whisper_full_get_segment_text(m_context, i);
     }
 
+    auto  id      = whisper_full_lang_id(m_context);
+    auto  langStr = whisper_lang_str(id);
     // Emit signal when transcription is done
-    emit  transcriptionCompleted(result);
+    // whisper_lang_str_full()
+    emit  transcriptionCompleted(result, QString::fromStdString(langStr));
 
     return;
 }

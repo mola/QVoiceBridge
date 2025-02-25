@@ -40,18 +40,13 @@ private slots:
 
     void  on_language_currentIndexChanged(int index);
 
-
-    // void  handleStateChanged(QMediaRecorder::RecorderState state);
-
-    // void  displayError();
-
     void  on_pbSend_clicked();
 
     void  on_sendSpeechBtn_clicked();
 
-    void  transcriptionCompleted(const QString &text); // emitted when whisper speech to text transcription is completed
+    void  transcriptionCompleted(const QString &text, const QString &language); // emitted when whisper speech to text transcription is completed
 
-    void  on_recordBtn_toggled(bool checked);
+    void  on_pbRecord_toggled(bool checked);
 
 private:
     // audio recording
