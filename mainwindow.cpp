@@ -37,48 +37,48 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
-    // m_model = new LlamaInterface();
-    // m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+    m_model = new LlamaInterface();
+    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
 
-    // m_thread = new QThread();
-    // m_model->moveToThread(m_thread);
-    // m_thread->start();
-
-
-    // connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
-    // {
-    // ui->txtToSpeach->insertPlainText(c);
-    // });
-
-    // connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
-    // {
-    // ui->txtToSpeach->insertPlainText("\n");
-    // playText(msg);
-    // }, Qt::QueuedConnection);
-
-    // m_devices = new QMediaDevices(this);
-
-    // QAudioFormat  format;
-
-    // format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
-    // format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
-    // format.setSampleFormat(QAudioFormat::Int16);
+    m_thread = new QThread();
+    m_model->moveToThread(m_thread);
+    m_thread->start();
 
 
-    // auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+    connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
+    {
+        ui->txtToSpeach->insertPlainText(c);
+    });
 
-    // m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+    connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
+    {
+        ui->txtToSpeach->insertPlainText("\n");
+        playText(msg);
+    }, Qt::QueuedConnection);
 
-    // int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
-    // int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
-    // int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    m_devices = new QMediaDevices(this);
 
-    // m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
-    // m_pConf.useESpeak      = true;
+    QAudioFormat  format;
 
-    // std::optional<piper::SpeakerId>  speakerId;
+    format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
+    format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
+    format.setSampleFormat(QAudioFormat::Int16);
 
-    // on_language_currentIndexChanged(0);
+
+    auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+
+    m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+
+    int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
+    int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
+    int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
+
+    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    m_pConf.useESpeak      = true;
+
+    std::optional<piper::SpeakerId>  speakerId;
+
+    on_language_currentIndexChanged(0);
 
     // whisper audio recorder
 
@@ -163,32 +163,6 @@ void  MainWindow::setupAudioFormat()
     m_audioSource = new QAudioSource(inputDevice, format, this);
 }
 
-void  MainWindow::on_recordBtn_clicked()
-{
-    // Start or stop recording based on state
-    if (!m_isRecording)
-    {
-        // Start recording
-        pcmf32.clear();
-        m_audioInputDevice = m_audioSource->start();
-
-        connect(m_audioInputDevice, &QIODevice::readyRead, this, &MainWindow::handleAudioData);
-
-        statusBar()->showMessage("Recording...");
-        m_isRecording = true;
-    }
-    else
-    {
-        // Stop recording
-        m_audioSource->stop();
-        statusBar()->showMessage("Recording Stopped. Processing audio...");
-
-        m_isRecording = false;
-        m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
-        // Optionally: Handle the captured audio data in pcmf32 or pcmf32s
-    }
-}
-
 void  MainWindow::handleAudioData()
 {
     // Read audio data from the input device
@@ -260,5 +234,33 @@ void  MainWindow::on_sendSpeechBtn_clicked()
 
 void  MainWindow::transcriptionCompleted(const QString &text)
 {
+    ui->speechTxtEdit->clear();
     ui->speechTxtEdit->setText(text);
+    QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+}
+
+void  MainWindow::on_recordBtn_toggled(bool checked)
+{
+    // Start or stop recording based on state
+    if (checked)
+    {
+        // Start recording
+        pcmf32.clear();
+        m_audioInputDevice = m_audioSource->start();
+
+        connect(m_audioInputDevice, &QIODevice::readyRead, this, &MainWindow::handleAudioData);
+
+        statusBar()->showMessage("Recording...");
+    }
+    else
+    {
+        // Stop recording
+        m_audioSource->stop();
+        statusBar()->showMessage("Recording Stopped. Processing audio...");
+
+        m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
+        pcmf32.clear();
+        pcmf32s.clear();
+        // Optionally: Handle the captured audio data in pcmf32 or pcmf32s
+    }
 }

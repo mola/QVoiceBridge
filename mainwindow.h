@@ -40,7 +40,6 @@ private slots:
 
     void  on_language_currentIndexChanged(int index);
 
-    void  on_recordBtn_clicked();
 
     // void  handleStateChanged(QMediaRecorder::RecorderState state);
 
@@ -51,6 +50,8 @@ private slots:
     void  on_sendSpeechBtn_clicked();
 
     void  transcriptionCompleted(const QString &text); // emitted when whisper speech to text transcription is completed
+
+    void  on_recordBtn_toggled(bool checked);
 
 private:
     // audio recording
@@ -77,7 +78,6 @@ private:
 
     std::vector<float>               pcmf32; // Mono-channel float
     std::vector<std::vector<float>>  pcmf32s; // Stereo-channel floats
-    bool                             m_isRecording = false;
     WhisperTranscriber              *m_whisperTranscriber;
 };
 #endif // MAINWINDOW_H
