@@ -9,6 +9,8 @@
 #include <QMediaDevices>
 #include <QBuffer>
 #include <QByteArray>
+#include <QSettings>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -24,8 +26,8 @@ using json = nlohmann::json;
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QDebug>
-#include <iostream>
 #include <QDateTime>
+#include <QMessageBox>
 
 #if QT_CONFIG(permissions)
 #include <QPermission>
@@ -37,48 +39,60 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
-    // m_model = new LlamaInterface();
-    // m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+    QSettings  settings;
+    QString    modelPath = settings.value("model_path", "").toString();
 
-    // m_thread = new QThread();
-    // m_model->moveToThread(m_thread);
-    // m_thread->start();
+    m_model = new LlamaInterface();
 
+    if (QFile::exists(modelPath))
+    {
+        m_modelLoaded = m_model->loadModel(modelPath);
+        ui->pbSend->setEnabled(m_modelLoaded);
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Model Path"), tr("Please set model path in settings"), QMessageBox::Ok);
+    }
 
-    // connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
-    // {
-    // ui->txtToSpeach->insertPlainText(c);
-    // });
-
-    // connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
-    // {
-    // ui->txtToSpeach->insertPlainText("\n");
-    // playText(msg);
-    // }, Qt::QueuedConnection);
-
-    // m_devices = new QMediaDevices(this);
-
-    // QAudioFormat  format;
-
-    // format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
-    // format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
-    // format.setSampleFormat(QAudioFormat::Int16);
+    m_thread = new QThread();
+    m_model->moveToThread(m_thread);
+    m_thread->start();
 
 
-    // auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+    connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
+    {
+        ui->txtToSpeach->insertPlainText(c);
+    });
 
-    // m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+    connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
+    {
+        ui->txtToSpeach->insertPlainText("\n");
+        playText(msg);
+    }, Qt::QueuedConnection);
 
-    // int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
-    // int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
-    // int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    m_devices = new QMediaDevices(this);
 
-    // m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
-    // m_pConf.useESpeak      = true;
+    QAudioFormat  format;
 
-    // std::optional<piper::SpeakerId>  speakerId;
+    format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
+    format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
+    format.setSampleFormat(QAudioFormat::Int16);
 
-    // on_language_currentIndexChanged(0);
+
+    auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+
+    m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+
+    int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
+    int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
+    int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
+
+    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    m_pConf.useESpeak      = true;
+
+    std::optional<piper::SpeakerId>  speakerId;
+
+    on_language_currentIndexChanged(0);
 
     // whisper audio recorder
 
@@ -238,7 +252,11 @@ void  MainWindow::transcriptionCompleted(const QString &text, const QString &lan
     ui->speechTxtEdit->setText(text);
     std::cout << "language: " << language.toStdString() << std::endl;
     ui->leLanguage->setText(language);
-    // QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+
+    if (m_modelLoaded)
+    {
+        QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+    }
 }
 
 void  MainWindow::on_pbRecord_toggled(bool checked)

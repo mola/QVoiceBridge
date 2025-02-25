@@ -65,6 +65,7 @@ private:
     QMediaDevices      *m_devices     = nullptr;
     QAudioSink         *m_audioOutput = nullptr;
     LlamaInterface     *m_model       = nullptr;
+    bool                m_modelLoaded = false;
     QThread            *m_thread      = nullptr;
 
     // whisper
