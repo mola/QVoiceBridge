@@ -9,6 +9,8 @@
 #include <QMediaDevices>
 #include <QBuffer>
 #include <QByteArray>
+#include <QSettings>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -24,8 +26,8 @@ using json = nlohmann::json;
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QDebug>
-#include <iostream>
 #include <QDateTime>
+#include <QMessageBox>
 
 #if QT_CONFIG(permissions)
 #include <QPermission>
@@ -37,8 +39,20 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
+    QSettings  settings;
+    QString    modelPath = settings.value("model_path", "").toString();
+
     m_model = new LlamaInterface();
-    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+
+    if (QFile::exists(modelPath))
+    {
+        m_modelLoaded = m_model->loadModel(modelPath);
+        ui->pbSend->setEnabled(m_modelLoaded);
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Model Path"), tr("Please set model path in settings"), QMessageBox::Ok);
+    }
 
     m_thread = new QThread();
     m_model->moveToThread(m_thread);
@@ -236,7 +250,11 @@ void  MainWindow::transcriptionCompleted(const QString &text)
 {
     ui->speechTxtEdit->clear();
     ui->speechTxtEdit->setText(text);
-    QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+
+    if (m_modelLoaded)
+    {
+        QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+    }
 }
 
 void  MainWindow::on_recordBtn_toggled(bool checked)
