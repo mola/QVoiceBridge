@@ -37,41 +37,48 @@ MainWindow::MainWindow(QWidget *parent):
 {
     ui->setupUi(this);
 
-    m_model = new LlamaInterface();
-    m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
+    // m_model = new LlamaInterface();
+    // m_model->loadModel("/extra/jan/models/llama3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf");
 
-    m_thread = new QThread();
-    m_model->moveToThread(m_thread);
-    m_thread->start();
-
-
-    connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
-    {
-        ui->txtToSpeach->insertPlainText(c);
-    });
-    m_devices = new QMediaDevices(this);
-
-    QAudioFormat  format;
-
-    format.setSampleRate(22050); // or pVoice.synthesisConfig.sampleRate
-    format.setChannelCount(1);   // or pVoice.synthesisConfig.channels
-    format.setSampleFormat(QAudioFormat::Int16);
+    // m_thread = new QThread();
+    // m_model->moveToThread(m_thread);
+    // m_thread->start();
 
 
-    auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+    // connect(m_model, &LlamaInterface::answerReady, this, [this](QString c)
+    // {
+    // ui->txtToSpeach->insertPlainText(c);
+    // });
 
-    m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+    // connect(m_model, &LlamaInterface::generateFinished, this, [this](std::string msg)
+    // {
+    // ui->txtToSpeach->insertPlainText("\n");
+    // playText(msg);
+    // }, Qt::QueuedConnection);
 
-    int  sampleRate   = 22050;    // For example, or use pVoice.synthesisConfig.sampleRate
-    int  channelCount = 1;      // For example, or use pVoice.synthesisConfig.channels
-    int  sampleSize   = 16;       // bits per sample (pVoice.synthesisConfig.sampleWidth)
+    // m_devices = new QMediaDevices(this);
 
-    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
-    m_pConf.useESpeak      = true;
+    // QAudioFormat  format;
 
-    std::optional<piper::SpeakerId>  speakerId;
+    // format.setSampleRate(22050);   // or pVoice.synthesisConfig.sampleRate
+    // format.setChannelCount(1);     // or pVoice.synthesisConfig.channels
+    // format.setSampleFormat(QAudioFormat::Int16);
 
-    on_language_currentIndexChanged(0);
+
+    // auto  defaultDeviceInfo = m_devices->defaultAudioOutput();
+
+    // m_audioOutput = new QAudioSink(defaultDeviceInfo, format);
+
+    // int  sampleRate   = 22050;      // For example, or use pVoice.synthesisConfig.sampleRate
+    // int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
+    // int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
+
+    // m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    // m_pConf.useESpeak      = true;
+
+    // std::optional<piper::SpeakerId>  speakerId;
+
+    // on_language_currentIndexChanged(0);
 
     // whisper audio recorder
 
@@ -88,25 +95,20 @@ MainWindow::~MainWindow()
 {
     delete ui;
     delete m_pVoice;
+
+    if (m_thread)
+    {
+        m_thread->quit();
+        m_thread->wait();
+        delete m_thread;
+    }
 }
 
 void  MainWindow::on_speakButton_clicked()
 {
-    piper::SynthesisResult  result = { };
-    std::vector<int16_t>    audioBuffer;
-    auto                    text = ui->txtToSpeach->toPlainText();
+    auto  text = ui->txtToSpeach->toPlainText();
 
-    piper::textToAudio(m_pConf, *m_pVoice, text.toStdString(), audioBuffer, result, nullptr);
-
-    QByteArray  audioData(reinterpret_cast<const char *>(audioBuffer.data()),
-                          static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
-
-    // Use a QBuffer to wrap the data for streaming playback.
-    // QBuffer *audioBufferQ = new QBuffer;
-    // audioBufferQ->setData(audioData);
-    auto  io = m_audioOutput->start();
-
-    io->write(audioData.data(), audioData.size());
+    playText(text.toStdString());
 }
 
 void  MainWindow::on_language_currentIndexChanged(int index)
@@ -138,7 +140,7 @@ void  MainWindow::on_language_currentIndexChanged(int index)
 void  MainWindow::on_pbSend_clicked()
 {
     auto  str = ui->lineModelText->text();
-    QMetaObject::invokeMethod(m_model, "askQuestion", Qt::QueuedConnection, Q_ARG(QString, str));
+    QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, str));
     // m_model->askQuestion(ui->lineModelText->text());
 }
 
@@ -231,6 +233,24 @@ void  MainWindow::requestMicrophonePermission()
     }
 
 #endif
+}
+
+void  MainWindow::playText(std::string msg)
+{
+    std::vector<int16_t>    audioBuffer;
+    piper::SynthesisResult  result = { };
+
+    piper::textToAudio(m_pConf, *m_pVoice, msg, audioBuffer, result, nullptr);
+
+    QByteArray  audioData(reinterpret_cast<const char *>(audioBuffer.data()),
+                          static_cast<int>(audioBuffer.size() * sizeof(int16_t)));
+
+    // Use a QBuffer to wrap the data for streaming playback.
+    // QBuffer *audioBufferQ = new QBuffer;
+    // audioBufferQ->setData(audioData);
+    auto  io = m_audioOutput->start();
+
+    io->write(audioData.data(), audioData.size());
 }
 
 void  MainWindow::on_sendSpeechBtn_clicked()
