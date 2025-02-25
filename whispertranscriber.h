@@ -26,8 +26,8 @@ public:
     void  transcribeAudio(std::vector<float> pcmf32, std::vector<std::vector<float>> pcmf32s);
 
 signals:
-    // Signal emitted when transcription is done
-    void  transcriptionCompleted(const QString &text, const QString &language);
+    // Signal emitted when transcription is done containing transcipted text and detected language code and detected language full name
+    void  transcriptionCompleted(const QString &text, QPair<QString, QString> language);
 
 private:
     struct whisper_context *m_context;  // Whisper context

@@ -136,11 +136,12 @@ void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector
         result += whisper_full_get_segment_text(m_context, i);
     }
 
-    auto  id      = whisper_full_lang_id(m_context);
-    auto  langStr = whisper_lang_str(id);
+    auto  id       = whisper_full_lang_id(m_context);
+    auto  langCode = whisper_lang_str(id);
+    auto  langFull = whisper_lang_str_full(id);
     // Emit signal when transcription is done
     // whisper_lang_str_full()
-    emit  transcriptionCompleted(result, QString::fromStdString(langStr));
+    emit  transcriptionCompleted(result, QPair<QString, QString>(QString::fromStdString(langCode), QString::fromStdString(langFull)));
 
     return;
 }

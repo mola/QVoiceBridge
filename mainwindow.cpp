@@ -87,7 +87,7 @@ MainWindow::MainWindow(QWidget *parent):
     int  channelCount = 1;        // For example, or use pVoice.synthesisConfig.channels
     int  sampleSize   = 16;         // bits per sample (pVoice.synthesisConfig.sampleWidth)
 
-    m_pConf.eSpeakDataPath = "/usr/piper/espeak-ng-data/";
+    m_pConf.eSpeakDataPath = "espeak-ng-data";
     m_pConf.useESpeak      = true;
 
     std::optional<piper::SpeakerId>  speakerId;
@@ -246,12 +246,12 @@ void  MainWindow::on_sendSpeechBtn_clicked()
     m_whisperTranscriber->transcribeAudio("audio1.wav");
 }
 
-void  MainWindow::transcriptionCompleted(const QString &text, const QString &language)
+void  MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QString> language)
 {
     ui->speechTxtEdit->clear();
     ui->speechTxtEdit->setText(text);
-    std::cout << "language: " << language.toStdString() << std::endl;
-    ui->leLanguage->setText(language);
+    statusBar()->showMessage("language: " + language.first + " : " + language.second);
+    ui->leLanguage->setText(language.second);
 
     if (m_modelLoaded)
     {

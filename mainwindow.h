@@ -44,7 +44,9 @@ private slots:
 
     void  on_sendSpeechBtn_clicked();
 
-    void  transcriptionCompleted(const QString &text, const QString &language); // emitted when whisper speech to text transcription is completed
+    // emitted when whisper speech to text transcription is completed
+    // containing transcipted text and detected language code and detected language full name
+    void  transcriptionCompleted(const QString &text, QPair<QString, QString> language);
 
     void  on_pbRecord_toggled(bool checked);
 
