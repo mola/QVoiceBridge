@@ -16,11 +16,10 @@ FrequencySpectrum::FrequencySpectrum(QWidget *parent):
 {
 }
 
-void  FrequencySpectrum::frequenciesChanged(const double *frequencies, const int numSamples)
+void FrequencySpectrum::frequenciesChanged(const double *frequencies, const int numSamples)
 {
     this->frequencies = frequencies;
     this->numSamples  = numSamples;
-    qDebug() << numSamples;
     update();
 }
 
@@ -28,18 +27,18 @@ FrequencySpectrum::~FrequencySpectrum()
 {
 }
 
-void  FrequencySpectrum::reset()
+void FrequencySpectrum::reset()
 {
     maxPower = 0.0;
     update();
 }
 
-void  FrequencySpectrum::redrawTimerExpired()
+void FrequencySpectrum::redrawTimerExpired()
 {
     update();
 }
 
-void  FrequencySpectrum::paintEvent(QPaintEvent *event)
+void FrequencySpectrum::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
 

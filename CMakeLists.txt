@@ -43,6 +43,9 @@ set(PROJECT_SOURCES
 
         widgets/frequencyspectrum.h widgets/frequencyspectrum.cpp
 
+        audio/audiostreamer.h audio/audiostreamer.cpp
+
+
         resource.qrc
 )
 
