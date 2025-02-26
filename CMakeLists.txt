@@ -39,10 +39,16 @@ set(PROJECT_SOURCES
         common.h
         common.cpp
         dr_wav.h
+        whispertranscriber.h whispertranscriber.cpp
+
+        widgets/frequencyspectrum.h widgets/frequencyspectrum.cpp
+
+        resource.qrc
 )
 
 include_directories (
 /usr/include/onnxruntime/
+widgets
 )
 
 # set(ESPEAK_NG_DIR "${CMAKE_CURRENT_BINARY_DIR}/ei")
@@ -54,7 +60,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QVoiceBridge
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        whispertranscriber.h whispertranscriber.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET test_tts APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -147,4 +152,5 @@ target_link_libraries(QVoiceBridge PRIVATE
     whisper
     ggml
     ggml-base
+    fftw3
 )

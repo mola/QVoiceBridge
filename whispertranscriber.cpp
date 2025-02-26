@@ -127,21 +127,25 @@ void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector
     QString    result;
     const int  n_segments = whisper_full_n_segments(m_context);
 
-    for (int i = 0; i < n_segments; i++)
+    if (n_segments > 0)
     {
-        // Optionally, you can also get the timestamps by:
-        // int64_t t0 = whisper_full_get_segment_t0(ctx, i);
-        // int64_t t1 = whisper_full_get_segment_t1(ctx, i);
-        // printf("[%s --> %s] ", to_timestamp(t0).c_str(), to_timestamp(t1).c_str());
-        result += whisper_full_get_segment_text(m_context, i);
-    }
+        for (int i = 0; i < n_segments; i++)
+        {
+            // Optionally, you can also get the timestamps by:
+            // int64_t t0 = whisper_full_get_segment_t0(ctx, i);
+            // int64_t t1 = whisper_full_get_segment_t1(ctx, i);
+            // printf("[%s --> %s] ", to_timestamp(t0).c_str(), to_timestamp(t1).c_str());
+            result += whisper_full_get_segment_text(m_context, i);
+        }
 
-    auto  id       = whisper_full_lang_id(m_context);
-    auto  langCode = whisper_lang_str(id);
-    auto  langFull = whisper_lang_str_full(id);
-    // Emit signal when transcription is done
-    // whisper_lang_str_full()
-    emit  transcriptionCompleted(result, QPair<QString, QString>(QString::fromStdString(langCode), QString::fromStdString(langFull)));
+        auto  id       = whisper_full_lang_id(m_context);
+        auto  langCode = whisper_lang_str(id);
+        auto  langFull = whisper_lang_str_full(id);
+
+        // Emit signal when transcription is done
+        // whisper_lang_str_full()
+        emit  transcriptionCompleted(result, QPair<QString, QString>(QString::fromStdString(langCode), QString::fromStdString(langFull)));
+    }
 
     return;
 }

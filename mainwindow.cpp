@@ -18,6 +18,7 @@ using json = nlohmann::json;
 
 #include "piper/piper.hpp"
 
+#include <iostream>
 
 // audio recorder:
 #include <QAudioInput>
@@ -40,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent):
     ui->setupUi(this);
 
     QSettings  settings;
-    QString    modelPath = settings.value("model_path", "").toString();
+    QString    modelPath = settings.value("model_path", "/home/mola/Data/Model/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf").toString();
 
     m_model = new LlamaInterface();
 
@@ -103,6 +104,9 @@ MainWindow::MainWindow(QWidget *parent):
     m_whisperTranscriber = new WhisperTranscriber(this);
     m_whisperTranscriber->initialize("ggml-small-q8_0.bin", "auto");
     connect(m_whisperTranscriber, &WhisperTranscriber::transcriptionCompleted, this, &MainWindow::transcriptionCompleted);
+
+    // Initialize FFTW resources
+    initializeFFTW();
 }
 
 MainWindow::~MainWindow()
@@ -116,6 +120,9 @@ MainWindow::~MainWindow()
         m_thread->wait();
         delete m_thread;
     }
+
+    // Clean up FFTW resources
+    cleanupFFTW();
 }
 
 void  MainWindow::on_speakButton_clicked()
@@ -149,6 +156,17 @@ void  MainWindow::on_language_currentIndexChanged(int index)
     }
 
     piper::initialize(m_pConf);
+
+    // Connect signals to slots (optional)
+    connect(this, &MainWindow::userStartedSpeaking, this, []()
+    {
+        std::cout << "User started speaking!" << std::endl;
+    });
+
+    connect(this, &MainWindow::userStoppedSpeaking, this, []()
+    {
+        std::cout << "User stopped speaking!" << std::endl;
+    });
 }
 
 void  MainWindow::on_pbSend_clicked()
@@ -160,21 +178,73 @@ void  MainWindow::on_pbSend_clicked()
 
 void  MainWindow::setupAudioFormat()
 {
-    QAudioFormat  format;
-    format.setSampleRate(16000);           // 16 kHz sample rate
-    format.setChannelCount(1);            // Mono audio
-    format.setSampleFormat(QAudioFormat::Int16); // 16-bit signed integer PCM
+    m_formatInput.setSampleRate(16000);           // 16 kHz sample rate
+    m_formatInput.setChannelCount(1);            // Mono audio
+    m_formatInput.setSampleFormat(QAudioFormat::Float); // 16-bit signed integer PCM
 
     const QAudioDevice  inputDevice = QMediaDevices::defaultAudioInput();
 
-    if (!inputDevice.isFormatSupported(format))
+    if (!inputDevice.isFormatSupported(m_formatInput))
     {
-        format = inputDevice.preferredFormat();
+        m_formatInput = inputDevice.preferredFormat();
         qDebug() << "Default format not supported; using closest match.";
     }
 
     // Create the QAudioSource with our chosen format
-    m_audioSource = new QAudioSource(inputDevice, format, this);
+    m_audioSource = new QAudioSource(inputDevice, m_formatInput, this);
+}
+
+qreal  MainWindow::calculateLevel(const std::vector<float> &data) const
+{
+    if (data.empty())
+    {
+        return 0.0; // Return 0 if the input data is empty
+    }
+
+    qreal  sum = 0.0;
+
+    // Calculate the sum of squares of the samples
+    for (const float sample : data)
+    {
+        sum += sample * sample; // Sum of squares
+    }
+
+    // Calculate the RMS value
+    qreal  rms = sqrt(sum / data.size());
+
+    return rms;
+}
+
+void  MainWindow::initializeFFTW()
+{
+    // Set the FFT size (e.g., 1024 samples)
+    m_fftwSize = 1024;
+
+    // Allocate memory for FFTW input and output arrays
+    m_fftwIn  = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * m_fftwSize);
+    m_fftwOut = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * m_fftwSize);
+
+    // Create the FFTW plan
+    m_fftwPlan = fftw_plan_dft_1d(m_fftwSize, m_fftwIn, m_fftwOut, FFTW_FORWARD, FFTW_MEASURE);
+}
+
+void  MainWindow::cleanupFFTW()
+{
+    // Destroy the FFTW plan and free memory
+    if (m_fftwPlan)
+    {
+        fftw_destroy_plan(m_fftwPlan);
+    }
+
+    if (m_fftwIn)
+    {
+        fftw_free(m_fftwIn);
+    }
+
+    if (m_fftwOut)
+    {
+        fftw_free(m_fftwOut);
+    }
 }
 
 void  MainWindow::handleAudioData()
@@ -182,21 +252,100 @@ void  MainWindow::handleAudioData()
     // Read audio data from the input device
     QByteArray  audioData = m_audioInputDevice->readAll();
 
-    // Convert raw PCM data to float samples
-    const qint16 *rawData     = reinterpret_cast<const qint16 *>(audioData.data());
-    int           sampleCount = audioData.size() / sizeof(qint16);
+    if (audioData.isEmpty())
+    {
+        return;
+    }
 
+    if (m_ignore < 10)
+    {
+        m_ignore++;
+
+        return;
+    }
+
+    // Convert raw PCM data to float samples
+    const float *rawData     = reinterpret_cast<const float *>(audioData.data());
+    int          sampleCount = audioData.size() / sizeof(float);
+
+    // Ensure the sample count matches the FFT size
+    if (sampleCount > m_fftwSize)
+    {
+        sampleCount = m_fftwSize; // Truncate if necessary
+    }
+
+    // Fill the input array with the audio data
     for (int i = 0; i < sampleCount; ++i)
     {
-        // Convert 16-bit signed integer sample to a 32-bit float in range [-1.0, 1.0]
-        float  sample = rawData[i] / 32768.0f;
+        m_fftwIn[i][0] = rawData[i]; // Real part
+        m_fftwIn[i][1] = 0.0;        // Imaginary part (set to 0 for real input)
+    }
 
-        pcmf32.push_back(sample);
+    // Execute the FFT
+    fftw_execute(m_fftwPlan);
+
+    // Process the FFT output (m_fftwOut array contains the frequency domain data)
+    std::vector<double>  magnitudes(m_fftwSize);
+    double               maxMagnitude = 0.0;
+
+    for (int i = 0; i < m_fftwSize; ++i)
+    {
+        magnitudes[i] = sqrt(m_fftwOut[i][0] * m_fftwOut[i][0] + m_fftwOut[i][1] * m_fftwOut[i][1]);
+
+        if (magnitudes[i] > maxMagnitude)
+        {
+            maxMagnitude = magnitudes[i];
+        }
+    }
+
+    // Optionally, you can pass the magnitudes to your chart view or other processing
+    ui->chartView->frequenciesChanged(magnitudes.data(), m_fftwSize);
+
+    // Voice Activity Detection (VAD) logic with hysteresis
+    if ((maxMagnitude > m_speechThreshold) && !m_isSpeaking)
+    {
+        // User started speaking
+        m_isSpeaking = true;
+
+        emit  userStartedSpeaking();  // Emit signal
+    }
+    else if ((maxMagnitude <= m_speechThreshold) && m_isSpeaking)
+    {
+        // User stopped speaking
+        m_isSpeaking = false;
+
+        emit  userStoppedSpeaking();  // Emit signal
     }
 
     // If stereo audio is required (not applicable here, as channel count is 1):
     // Store this as a single-channel vector. If multi-channel, you would need
     // to split samples by channel here.
+
+    // Voice Activity Detection (VAD) logic with hysteresis
+    // static const qreal  silenceThreshold  = 0.0015; // Lower threshold for silence
+    // static const qreal  activityThreshold = 0.001; // Higher threshold for activity
+
+    // if ((lvl >= activityThreshold) && !m_isAboveThreshold)
+    // {
+    //// Level crossed above the activity threshold
+    // m_isAboveThreshold = true;
+    // }
+    // else if ((lvl < silenceThreshold) && m_isAboveThreshold)
+    // {
+    //// Level crossed below the silence threshold
+    // m_isAboveThreshold = false;
+
+    //// Trigger transcription
+    // m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
+    // pcmf32.clear();
+    // pcmf32s.clear();
+    // }
+
+    // if (m_isAboveThreshold)
+    // {
+    //// Append the new audio data directly to pcmf32
+    // pcmf32.insert(pcmf32.end(), rawData, rawData + sampleCount);
+    // }
 }
 
 void  MainWindow::requestMicrophonePermission()
@@ -253,9 +402,23 @@ void  MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QSt
     statusBar()->showMessage("language: " + language.first + " : " + language.second);
     ui->leLanguage->setText(language.second);
 
+    if (text.isEmpty())
+    {
+        return;
+    }
+
+    if (!ui->language->currentText().startsWith(language.first, Qt::CaseInsensitive))
+    {
+    }
+
     if (m_modelLoaded)
     {
-        QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+        if (text.contains("[") && text.contains("]"))
+        {
+            return;
+        }
+
+        // QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
     }
 }
 
@@ -274,16 +437,17 @@ void  MainWindow::on_pbRecord_toggled(bool checked)
         statusBar()->showMessage("Recording...");
         ui->pbRecord->setText("Stop Recording");
     }
-    else
-    {
-        // Stop recording
-        m_audioSource->stop();
-        statusBar()->showMessage("Recording Stopped. Processing audio...");
 
-        m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
-        pcmf32.clear();
-        pcmf32s.clear();
-        ui->pbRecord->setText("Start Recording");
-        // Optionally: Handle the captured audio data in pcmf32 or pcmf32s
-    }
+    // else
+    // {
+    //// Stop recording
+    // m_audioSource->stop();
+    // statusBar()->showMessage("Recording Stopped. Processing audio...");
+
+    // m_whisperTranscriber->transcribeAudio(pcmf32, pcmf32s);
+    // pcmf32.clear();
+    // pcmf32s.clear();
+    // ui->pbRecord->setText("Start Recording");
+    //// Optionally: Handle the captured audio data in pcmf32 or pcmf32s
+    // }
 }

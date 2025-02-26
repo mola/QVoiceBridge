@@ -16,6 +16,25 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="title">
+       <string>Models Directory</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <widget class="QLineEdit" name="lineEdit"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton">
+         <property name="text">
+          <string>Choose Models Directory</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
      <widget class="QGroupBox" name="groupBox">
       <property name="title">
        <string>Speech to Text</string>
@@ -34,7 +53,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="wave" native="true">
+          <widget class="FrequencySpectrum" name="chartView" native="true">
            <property name="minimumSize">
             <size>
              <width>500</width>
@@ -195,6 +214,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>FrequencySpectrum</class>
+   <extends>QWidget</extends>
+   <header>widgets/frequencyspectrum.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
