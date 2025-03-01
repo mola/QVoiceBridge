@@ -17,15 +17,20 @@ public:
 
     ~FrequencySpectrum() override;
 
-    void  paintEvent(QPaintEvent *event) override;
+    void    paintEvent(QPaintEvent *event) override;
 
 public slots:
-    void  reset();
+    void    reset();
 
-    void  frequenciesChanged(const double *frequencies, const int numSamples);
+    void    frequenciesChanged(const double *frequencies, const int numSamples);
+
+    // Setter and getter for the threshold value.
+    void    setThreshold(double thresholdValue);
+
+    double  getThreshold() const;
 
 private slots:
-    void  redrawTimerExpired();
+    void    redrawTimerExpired();
 
 private:
     /**
@@ -43,6 +48,9 @@ private:
     // QTime frequenciesChanged;
     QTimer *redrawTimer;
     QColor  frequencyColor;
+
+    // The threshold value (in the same units as frequency amplitude).
+    double  threshold;
 };
 
 #endif // FREQUENCYSPECTRUM_H

@@ -35,24 +35,26 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_speakButton_clicked();
+    void  on_speakButton_clicked();
 
-    void on_language_currentIndexChanged(int index);
+    void  on_language_currentIndexChanged(int index);
 
-    void on_pbSend_clicked();
+    void  on_pbSend_clicked();
 
-    void on_sendSpeechBtn_clicked();
+    void  on_sendSpeechBtn_clicked();
 
-    void transcriptionCompleted(const QString &text, QPair<QString, QString> language);
+    void  transcriptionCompleted(const QString &text, QPair<QString, QString> language);
 
-    void on_pbRecord_toggled(bool checked);
+    void  on_pbRecord_toggled(bool checked);
 
-    void handleAudioDataProcessed(const std::vector<double> &magnitudes);
+    void  handleAudioDataProcessed(const std::vector<double> &magnitudes);
+
+    void  on_spinThreshold_valueChanged(double arg1);
 
 private:
-    void requestMicrophonePermission();
+    void  requestMicrophonePermission();
 
-    void playText(std::string msg);
+    void  playText(std::string msg);
 
 private:
     Ui::MainWindow     *ui;

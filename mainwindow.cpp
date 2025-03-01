@@ -113,11 +113,15 @@ MainWindow::MainWindow(QWidget *parent):
     connect(m_audioStreamer, &AudioStreamer::audioDataProcessed, this, &MainWindow::handleAudioDataProcessed);
     connect(m_audioStreamer, &AudioStreamer::userStartedSpeaking, this, []()
     {
-        qDebug() << "User started speaking!";
+        std::cout << "User started speaking!" << std::endl;
     });
     connect(m_audioStreamer, &AudioStreamer::userStoppedSpeaking, this, []()
     {
-        qDebug() << "User stopped speaking!";
+        std::cout << "User stopped speaking!" << std::endl;
+    });
+    connect(m_audioStreamer, &AudioStreamer::audioDataLevel, this, [this](double lvl)
+    {
+        ui->lblLEvel->setText(QString::number(lvl, 'f', 6));
     });
 }
 
@@ -145,14 +149,14 @@ MainWindow::~MainWindow()
     delete m_pVoice;
 }
 
-void MainWindow::on_speakButton_clicked()
+void  MainWindow::on_speakButton_clicked()
 {
     auto  text = ui->txtToSpeach->toPlainText();
 
     playText(text.toStdString());
 }
 
-void MainWindow::on_language_currentIndexChanged(int index)
+void  MainWindow::on_language_currentIndexChanged(int index)
 {
     std::optional<piper::SpeakerId>  speakerId;
 
@@ -178,7 +182,7 @@ void MainWindow::on_language_currentIndexChanged(int index)
     piper::initialize(m_pConf);
 }
 
-void MainWindow::on_pbSend_clicked()
+void  MainWindow::on_pbSend_clicked()
 {
     auto  str = ui->lineModelText->text();
     QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, str));
@@ -186,7 +190,7 @@ void MainWindow::on_pbSend_clicked()
     // m_model->askQuestion(ui->lineModelText->text());
 }
 
-void MainWindow::requestMicrophonePermission()
+void  MainWindow::requestMicrophonePermission()
 {
 #if QT_CONFIG(permissions)
     QMicrophonePermission  microphonePermission;
@@ -210,7 +214,7 @@ void MainWindow::requestMicrophonePermission()
 #endif
 }
 
-void MainWindow::playText(std::string msg)
+void  MainWindow::playText(std::string msg)
 {
     std::vector<int16_t>    audioBuffer;
     piper::SynthesisResult  result = { };
@@ -228,12 +232,12 @@ void MainWindow::playText(std::string msg)
     io->write(audioData.data(), audioData.size());
 }
 
-void MainWindow::on_sendSpeechBtn_clicked()
+void  MainWindow::on_sendSpeechBtn_clicked()
 {
     m_whisperTranscriber->transcribeAudio("audio1.wav");
 }
 
-void MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QString> language)
+void  MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QString> language)
 {
     ui->speechTxtEdit->clear();
     ui->speechTxtEdit->setText(text);
@@ -260,7 +264,7 @@ void MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QStr
     }
 }
 
-void MainWindow::on_pbRecord_toggled(bool checked)
+void  MainWindow::on_pbRecord_toggled(bool checked)
 {
     if (checked)
     {
@@ -276,7 +280,13 @@ void MainWindow::on_pbRecord_toggled(bool checked)
     }
 }
 
-void MainWindow::handleAudioDataProcessed(const std::vector<double> &magnitudes)
+void  MainWindow::handleAudioDataProcessed(const std::vector<double> &magnitudes)
 {
     ui->chartView->frequenciesChanged(magnitudes.data(), magnitudes.size());
+}
+
+void  MainWindow::on_spinThreshold_valueChanged(double arg1)
+{
+    m_audioStreamer->setSpeechThreshold(arg1);
+    ui->chartView->setThreshold(arg1);
 }

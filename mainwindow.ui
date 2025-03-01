@@ -69,7 +69,34 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="leLanguage"/>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Threshold</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="lblLEvel">
+             <property name="text">
+              <string>0.0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QDoubleSpinBox" name="spinThreshold"/>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="leLanguage"/>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>
@@ -218,7 +245,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <customwidget>
    <class>FrequencySpectrum</class>
    <extends>QWidget</extends>
-   <header>widgets/frequencyspectrum.h</header>
+   <header location="global">frequencyspectrum.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
