@@ -100,9 +100,14 @@ MainWindow::MainWindow(QWidget *parent):
     requestMicrophonePermission();
 
     // whisper
-    m_whisperTranscriber = new WhisperTranscriber(this);
+    m_whisperTranscriber = new WhisperTranscriber();
     m_whisperTranscriber->initialize("ggml-small-q8_0.bin", "auto");
     connect(m_whisperTranscriber, &WhisperTranscriber::transcriptionCompleted, this, &MainWindow::transcriptionCompleted);
+
+    m_whisperThread = new QThread();
+    m_whisperTranscriber->moveToThread(m_whisperThread);
+    m_whisperThread->start();
+
 
     // Initialize audio streamer and move it to a separate thread
     m_audioStreamer = new AudioStreamer();
@@ -123,10 +128,24 @@ MainWindow::MainWindow(QWidget *parent):
     {
         ui->lblLEvel->setText(QString::number(lvl, 'f', 6));
     });
+
+    connect(m_audioStreamer, &AudioStreamer::audioDataRaw, m_whisperTranscriber, &WhisperTranscriber::transcribeAudio, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow()
 {
+    if (m_whisperThread)
+    {
+        m_whisperThread->quit();
+        m_whisperThread->wait();
+        delete m_whisperThread;
+    }
+
+    if (m_whisperTranscriber)
+    {
+        delete m_whisperTranscriber;
+    }
+
     if (m_audioThread)
     {
         m_audioThread->quit();
@@ -234,7 +253,6 @@ void  MainWindow::playText(std::string msg)
 
 void  MainWindow::on_sendSpeechBtn_clicked()
 {
-    m_whisperTranscriber->transcribeAudio("audio1.wav");
 }
 
 void  MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QString> language)
@@ -260,7 +278,7 @@ void  MainWindow::transcriptionCompleted(const QString &text, QPair<QString, QSt
             return;
         }
 
-        // QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
+        QMetaObject::invokeMethod(m_model, "generate", Qt::QueuedConnection, Q_ARG(QString, text));
     }
 }
 

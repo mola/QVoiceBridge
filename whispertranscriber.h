@@ -20,10 +20,11 @@ public:
     bool  initialize(const QString &modelPath, const QString &languag);
 
     // Asynchronously transcribe audio file
-    void  transcribeAudio(const QString &audioFilePath);
+    // void  transcribeAudio(const QString &audioFilePath);
 
+public slots:
     // Asynchronously transcribe audio data
-    void  transcribeAudio(std::vector<float> pcmf32, std::vector<std::vector<float>> pcmf32s);
+    void  transcribeAudio(std::vector<float> pcmf32);
 
 signals:
     // Signal emitted when transcription is done containing transcipted text and detected language code and detected language full name

@@ -14,7 +14,7 @@ FrequencySpectrum::FrequencySpectrum(QWidget *parent):
     , maxPower(1)
     , redrawTimer(new QTimer(this))
     , frequencyColor(Qt::red)
-    , threshold(0.5)
+    , threshold(10.0)
 {
 }
 
@@ -27,8 +27,19 @@ void  FrequencySpectrum::frequenciesChanged(const double *frequencies, const int
 
 void  FrequencySpectrum::setThreshold(double thresholdValue)
 {
+    // Ensure the threshold is within the range of the frequency amplitudes
+    if (thresholdValue < 0.0)
+    {
+        thresholdValue = 0.0;
+    }
+    else if (thresholdValue > maxPower)
+    {
+        thresholdValue = maxPower;
+    }
+
     threshold = thresholdValue;
-    update();  // trigger a repaint so the new threshold is visible immediately
+    // trigger a repaint so the new threshold is visible immediately
+    update();
 }
 
 double  FrequencySpectrum::getThreshold() const
@@ -62,32 +73,25 @@ void  FrequencySpectrum::paintEvent(QPaintEvent *event)
     painter.fillRect(rect(), Qt::white);
     painter.setPen(frequencyColor);
 
-    QRect  bar       = rect();
-    int    maxHeight = bar.height();  // height of drawing area
-    // Start drawing the spectrum from the left-bottom corner.
+    QRect   bar       = rect();
+    int     maxHeight = bar.height();  // height of drawing area
     QPoint  lastPoint(0, maxHeight);
 
-    // Draw an initial point
     painter.drawPoint(lastPoint);
 
     int     pixelsWide = bar.width();
     double  xStep      = static_cast<double>(pixelsWide) / numSamples;
 
-    // Since maxPower might change based on incoming data,
-    // update maxPower based on the current samples.
+    // Update maxPower based on the current samples
     for (int i = 0; i < static_cast<int>(numSamples); i++)
     {
         maxPower = std::max(maxPower, frequencies[i]);
     }
 
-    // Draw the frequency spectrum without averaging.
+    // Draw the frequency spectrum
     for (int i = 0; i < static_cast<int>(numSamples); i++)
     {
-        // Calculate the x coordinate for the current frequency sample.
-        int  x = static_cast<int>(i * xStep);
-
-        // Map the frequency amplitude to a y coordinate.
-        // The higher the amplitude, the lower the y coordinate.
+        int     x = static_cast<int>(i * xStep);
         int     y = maxHeight - static_cast<int>((frequencies[i] / maxPower) * maxHeight);
         QPoint  currentPoint(x, y);
 
@@ -95,19 +99,18 @@ void  FrequencySpectrum::paintEvent(QPaintEvent *event)
         lastPoint = currentPoint;
     }
 
-    // After drawing frequency data, add a horizontal green threshold line.
+    // Draw the threshold line
     QPen  thresholdPen(Qt::darkGreen);
 
     thresholdPen.setStyle(Qt::DashLine);
     thresholdPen.setWidth(2);
     painter.setPen(thresholdPen);
 
-    // Compute the y coordinate for the threshold line.
-    // If maxPower is not 0, scale accordingly; otherwise, place at the bottom.
     int  thresholdY = maxHeight;
 
     if (maxPower > 0)
     {
+        // Ensure the threshold is within the range of the frequency amplitudes
         thresholdY = maxHeight - static_cast<int>((threshold / maxPower) * maxHeight);
     }
 

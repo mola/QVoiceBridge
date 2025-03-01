@@ -91,7 +91,11 @@
             </widget>
            </item>
            <item>
-            <widget class="QDoubleSpinBox" name="spinThreshold"/>
+            <widget class="QDoubleSpinBox" name="spinThreshold">
+             <property name="value">
+              <double>10.000000000000000</double>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QLineEdit" name="leLanguage"/>

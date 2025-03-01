@@ -62,31 +62,31 @@ bool  WhisperTranscriber::initialize(const QString &modelPath, const QString &la
     return true;
 }
 
-void  WhisperTranscriber::transcribeAudio(const QString &audioFilePath)
-{
-    std::string  wavfile = audioFilePath.toStdString();
+// void  WhisperTranscriber::transcribeAudio(const QString &audioFilePath)
+// {
+// std::string  wavfile = audioFilePath.toStdString();
 
-    if (!is_file_exist(wavfile.c_str()))
-    {
-        qWarning() << "error: input file not found '%s'\n" << audioFilePath;
+// if (!is_file_exist(wavfile.c_str()))
+// {
+// qWarning() << "error: input file not found '%s'\n" << audioFilePath;
 
-        return;
-    }
+// return;
+// }
 
-    std::vector<float>               pcmf32;               // mono-channel WAV samples (32-bit float)
-    std::vector<std::vector<float>>  pcmf32s;   // stereo channels if diarization is enabled
+// std::vector<float>               pcmf32;               // mono-channel WAV samples (32-bit float)
+// std::vector<std::vector<float>>  pcmf32s;   // stereo channels if diarization is enabled
 
-    if (!read_wav(wavfile, pcmf32, pcmf32s, m_params->diarize))
-    {
-        fprintf(stderr, "error: failed to read WAV file '%s'\n", wavfile.c_str());
+// if (!read_wav(wavfile, pcmf32, pcmf32s, m_params->diarize))
+// {
+// fprintf(stderr, "error: failed to read WAV file '%s'\n", wavfile.c_str());
 
-        return;
-    }
+// return;
+// }
 
-    transcribeAudio(pcmf32, pcmf32s);
-}
+// transcribeAudio(pcmf32);
+// }
 
-void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32, std::vector<std::vector<float>> pcmf32s)
+void  WhisperTranscriber::transcribeAudio(std::vector<float> pcmf32)
 {
     // ─────────────────────────────────────────────────────────────
     // (Optional) Print some basic info about the file

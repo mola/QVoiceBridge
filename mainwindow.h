@@ -18,6 +18,7 @@
 
 #include <fftw3.h> // Include FFTW3 header
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
@@ -66,6 +67,7 @@ private:
     bool                m_modelLoaded = false;
     QThread            *m_thread      = nullptr;
     WhisperTranscriber *m_whisperTranscriber;
+    QThread            *m_whisperThread = nullptr;
     AudioStreamer      *m_audioStreamer = nullptr;
     QThread            *m_audioThread   = nullptr;
 };

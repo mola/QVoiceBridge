@@ -8,6 +8,7 @@
 #include <QMediaDevices>
 #include <QThread>
 #include <fftw3.h>
+#include <QTimer>
 
 class AudioStreamer: public QObject
 {
@@ -18,30 +19,37 @@ public:
 
     ~AudioStreamer();
 
-    void startStreaming();
+    void    startStreaming();
 
-    void stopStreaming();
+    void    stopStreaming();
 
-    double speechThreshold() const;
+    double  speechThreshold() const;
 
-    void setSpeechThreshold(double newSpeechThreshold);
+    void    setSpeechThreshold(double newSpeechThreshold);
 
 signals:
-    void userStartedSpeaking();
+    void    userStartedSpeaking();
 
-    void userStoppedSpeaking();
+    void    userStoppedSpeaking();
 
-    void audioDataProcessed(const std::vector<double> &magnitudes);
+    void    audioDataProcessed(const std::vector<double> &magnitudes);
+
+    void    audioDataRaw(std::vector<float>);
+
+    void    audioDataLevel(double);
 
 private slots:
-    void handleAudioData();
+    void    handleAudioData();
+
+    // Slot for handling the timer timeout
+    void    onDelayTimerTimeout();
 
 private:
-    void setupAudioFormat();
+    void    setupAudioFormat();
 
-    void initializeFFTW();
+    void    initializeFFTW();
 
-    void cleanupFFTW();
+    void    cleanupFFTW();
 
 private:
     QAudioSource *m_audioSource      = nullptr;
@@ -54,10 +62,19 @@ private:
     fftw_plan     m_fftwPlan;                        // FFTW plan
     int           m_fftwSize = 0;                    // Size of the FFT (number of samples)
 
+    std::vector<float>               pcmf32; // Mono-channel float
+    std::vector<std::vector<float>>  pcmf32s; // Stereo-channel floats
+
     // Threshold for detecting speech
-    double  m_speechThreshold = 4.0;                // Adjust this value based on your needs
+    double  m_speechThreshold = 10.0;                // Adjust this value based on your needs
     bool    m_isSpeaking      = false;               // Track whether the user is currently speaking
     int     m_ignore          = 0;
+
+
+    // Timer for one-second delay
+    QTimer *m_delayTimer = nullptr;
+    // Flag to track if we're in the delay period
+    bool  m_isDelaying = false;
 };
 
 #endif // AUDIOSTREAMER_H
