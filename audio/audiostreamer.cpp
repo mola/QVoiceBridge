@@ -183,6 +183,10 @@ void  AudioStreamer::handleAudioData()
             m_delayTimer->stop();
             m_isDelaying = false;
         }
+        else
+        {
+            pcmf32.clear();
+        }
 
         emit  userStartedSpeaking();
     }

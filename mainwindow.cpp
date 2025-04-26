@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent):
 
     std::optional<piper::SpeakerId>  speakerId;
 
-    on_language_currentIndexChanged(0);
+    on_language_currentIndexChanged(1);
 
     // whisper audio recorder
 
@@ -101,7 +101,7 @@ MainWindow::MainWindow(QWidget *parent):
 
     // whisper
     m_whisperTranscriber = new WhisperTranscriber();
-    m_whisperTranscriber->initialize("ggml-small-q8_0.bin", "auto");
+    m_whisperTranscriber->initialize("ggml-large-v3-turbo-q8_0.bin", "fa");
     connect(m_whisperTranscriber, &WhisperTranscriber::transcriptionCompleted, this, &MainWindow::transcriptionCompleted);
 
     m_whisperThread = new QThread();

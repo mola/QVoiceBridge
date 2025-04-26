@@ -2,6 +2,7 @@
 
 #include "llama.h"
 #include <QDebug>
+#include "document.h"
 
 LlamaInterface::LlamaInterface(QObject *parent):
     QObject(parent), m_context(nullptr)
@@ -74,6 +75,19 @@ bool  LlamaInterface::loadModel(const QString &modelFile)
     m_formatted = std::vector<char>(llama_n_ctx(m_context));
 
     emit  modelLoaded();
+
+    m_messages.push_back({ "system", strdup(documents.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus1.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus2.c_str()) });
+    // m_messages.push_back({ "system", strdup(documentStatus3.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus4.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus5.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus5.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus6.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus7.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus8.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus9.c_str()) });
+    m_messages.push_back({ "system", strdup(documentStatus10.c_str()) });
 
     return true;
 }

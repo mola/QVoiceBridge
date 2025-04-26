@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 
+
 // Forward declarations: use the appropriate types if they’re defined in the llama headers
 struct llama_model;
 struct llama_context;
